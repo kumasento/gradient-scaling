@@ -1,0 +1,1 @@
+from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
