@@ -85,6 +85,7 @@ def main():
                         choices=('ssd300', 'ssd512'),
                         default='ssd300')
     parser.add_argument('--batchsize', type=int, default=32)
+    parser.add_argument('--np', type=int, default=8)
     parser.add_argument('--test-batchsize', type=int, default=16)
     parser.add_argument('--iteration', type=int, default=120000)
     parser.add_argument('--step', type=int, nargs='*', default=[80000, 100000])
@@ -153,13 +154,15 @@ def main():
     device = comm.intra_rank
 
     # Set up workspace
-    chainer.cuda.set_max_workspace_size(16 * 1024 * 1024 *
-                                        1024)  # 12 GB GPU RAM for workspace
+    # 12 GB GPU RAM for workspace
+    chainer.cuda.set_max_workspace_size(16 * 1024 * 1024 * 1024)
     chainer.global_config.cv_resize_backend = 'cv2'
-    # if args.dtype != 'float32':
-    chainer.global_config.use_cudnn = 'never'
+
     # Setup the data type
     # when initializing models as follows, their data types will be casted.
+    # Weethave to forbid the usage of cudnn
+    if args.dtype != 'float32':
+        chainer.global_config.use_cudnn = 'never'
     chainer.global_config.dtype = dtypes[args.dtype]
     print('==> Setting the data type to {}'.format(args.dtype))
 
@@ -236,7 +239,8 @@ def main():
     train_iter = chainer.iterators.MultiprocessIterator(train,
                                                         args.batchsize //
                                                         comm.size,
-                                                        n_processes=2,
+                                                        n_processes=8,
+                                                        n_prefetch=2,
                                                         shared_mem=shared_mem)
 
     if comm.rank == 0:  # NOTE: only performed on the first device
@@ -285,6 +289,7 @@ def main():
     #                trigger=triggers.ManualScheduleTrigger(
     #                    args.step, 'iteration'))
     warmup_attr_ratio = 0.1 if args.batchsize != 32 else None
+    # NOTE: this is confusing but it means n_iter
     warmup_n_epoch = 1000 if args.batchsize != 32 else None
     lr_shift = chainerlp.extensions.ExponentialShift(
         'lr',
