@@ -16,7 +16,6 @@ class IdentityLossScalingHook(chainer.function_node.FunctionNode):
 
     def backward(self, indexes, grad_outputs):
         """ Behavior depends on the setting """
-        # print(grad_outputs)
         gs = []
 
         # HACK: fix for concat
@@ -25,15 +24,17 @@ class IdentityLossScalingHook(chainer.function_node.FunctionNode):
                 self.state[i] = self.state[0]
 
         for i, g in enumerate(grad_outputs):
-            if self.pre_hook:  # attach state
-                for k, v in self.state[i].items():
-                    g.__dict__[k] = v
-            else:  # store state
-                if i not in self.state:
-                    self.state[i] = {}
-                for k in state_keys:
-                    self.state[i][k] = g.__dict__[k]
+            if g is not None:
+                if self.pre_hook:  # attach state
+                    for k, v in self.state[i].items():
+                        g.__dict__[k] = v
+                else:  # store state
+                    if i not in self.state:
+                        self.state[i] = {}
+                    for k in state_keys:
+                        self.state[i][k] = g.__dict__[k]
             gs.append(g)
+
         return gs
 
 
@@ -43,6 +44,7 @@ class IdentityLossScalingWrapper(chainer.link.Link):
     def __init__(self, func):
         """ func is what to be wrapped. """
         super().__init__()
+
         self.func = func
         self.state = {}
 
@@ -58,6 +60,7 @@ class IdentityLossScalingWrapper(chainer.link.Link):
 
         if not isinstance(zs, tuple):
             zs = (zs,)
+
         rs = IdentityLossScalingHook(self.state, pre_hook=False).apply(zs)
         if len(rs) == 1:
             rs = rs[0]

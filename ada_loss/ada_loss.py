@@ -157,7 +157,7 @@ class AdaLoss(object):
             loss scale. """
         return self.cur_iter % self.update_per_n_iteration == 0
 
-    def get_unbound_loss_scale(self, g, W, prev_scale=None):
+    def get_unbound_loss_scale(self, g, W=None, prev_scale=None):
         """ Get the loss scale for the current layer. """
         # TODO: Refactorize this piece
         if not self.is_updating:
@@ -186,15 +186,17 @@ class AdaLoss(object):
                         self.loss_scale_method))
             self.loss_scales.append(loss_scale)
 
+            # print(loss_scale)
+
         # update state
         # TODO: test this functionality
         self.cur_iter += 1
 
         return loss_scale
 
-    def get_loss_scale(self, g, W, prev_scale=None):
+    def get_loss_scale(self, g, W=None, prev_scale=None):
         # preliminary results
-        loss_scale = self.get_unbound_loss_scale(g, W, prev_scale=prev_scale)
+        loss_scale = self.get_unbound_loss_scale(g, W=None, prev_scale=prev_scale)
         self.record_loss_scale('unbound', loss_scale)
 
         # if self.loss_scale_method == 'fixed':
@@ -237,7 +239,7 @@ class AdaLoss(object):
 
         return pot_scale.astype(self.scale_dtype)  # cast back
 
-    def loss_scaling(self, g, W):
+    def loss_scaling(self, g, W=None):
         """ Called to calculate the loss scale.
 
             This API works specifically for GEMM based operations.
@@ -248,7 +250,7 @@ class AdaLoss(object):
         total_start = timer()
 
         prev_scale = self.get_prev_scale(g)
-        scale = self.get_loss_scale(g, W, prev_scale=prev_scale)
+        scale = self.get_loss_scale(g, W=W, prev_scale=prev_scale)
         # u_grad = self.get_unscaled_gradient(g, prev_scale)
         grad = self.get_scaled_gradient(g, scale, prev_scale=prev_scale)
 
@@ -257,6 +259,10 @@ class AdaLoss(object):
             self.profiler.add_time('total', total_end - total_start)
 
         return grad, prev_scale  # u_grad
+
+    def loss_scaling_cast(self, x):
+        """ Calculate the loss scale in the cast scenario """
+        raise NotImplementedError('loss_scaling_cast has not been implemented') 
 
     def rescaling(self, gs):
         """ Rescale a list of gradients. """

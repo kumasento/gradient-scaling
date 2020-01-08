@@ -37,6 +37,9 @@ class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):
 
         # NOTE: where to call the ada_loss function
         gy_, prev_scale = self.ada_loss.loss_scaling(gy, W)
+
+        # xp = chainer.backend.get_array_module(x.array)
+        # print(xp.count_nonzero(gy_.array) / gy_.size)
         # gy_, prev_scale = gy, 1.0
 
         # xp = chainer.backend.get_array_module(x.array)

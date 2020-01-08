@@ -79,11 +79,15 @@ class AdaLossScaled(chainer.Chain):
             cfg = {}
         if seed is not None:
             set_random_seed(seed)
+        self.cfg = cfg
         print(cfg)
         self.setup(link, cfg=cfg, transforms=transforms)
 
         with self.init_scope():
             self.link = link
+
+    def predict(self, x):
+        return self.link.predict(x)
 
     def forward(self, x):
         """ Forward computation """

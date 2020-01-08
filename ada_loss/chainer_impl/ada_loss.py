@@ -7,6 +7,7 @@ from timeit import default_timer as timer
 import numpy as np
 import chainer
 import chainer.functions as F
+from chainer import utils
 
 
 class AdaLossChainer(AdaLoss):
@@ -146,13 +147,18 @@ class AdaLossChainer(AdaLoss):
         if self.debug_level >= 1:
             assert not xp.isnan(X_).any() and not xp.isinf(X_).any()
 
-        X_ = X_.astype(self.full_dtype)
+        if X.dtype != self.full_dtype:
+            # Now X_ and X.array are two different things
+            X_ = X_.astype(self.full_dtype)
         mu, sigma = X_.mean(), X_.std()
 
         if hasattr(xp, 'asnumpy'):
             mu = xp.asnumpy(mu)
             sigma = xp.asnumpy(sigma)
-        del X_
+
+        if X.dtype != self.full_dtype:
+            del X_
+
         return mu, sigma
 
     def get_mean_and_std_of_product(self, X, Y):
@@ -177,12 +183,20 @@ class AdaLossChainer(AdaLoss):
 
     def get_loss_scale_by_approx_range(self,
                                        g,
-                                       W,
+                                       W=None,
                                        n_sigma=1e-2,
                                        bound_by_fan_in=True):
+        """ """
         xp = chainer.backend.get_array_module(g)
+        # NOTE assume zero mean
+        u_min, u_max = self.range
+
+        # calculate the statistics
         calc_stat_start = timer()
-        _, o_sigma = self.get_mean_and_std_of_product(g, W)
+        if W is not None:
+            _, o_sigma = self.get_mean_and_std_of_product(g, W)
+        else:
+            o_mu, o_sigma = self.get_mean_and_std(g)
         calc_stat_end = timer()
         if self.profiler is not None:
             self.profiler.add_time('calc_stat', calc_stat_end - calc_stat_start)
@@ -191,27 +205,35 @@ class AdaLossChainer(AdaLoss):
         # e.g., a all-zero gradient.
         if o_sigma == 0:
             return np.array(1, dtype=self.full_dtype)
-        # print('o_sigma = {} {}'.format(o_sigma, o_sigma.dtype))
-        # print('o_mu={}'.format(g_mu * w_mu))
 
         # NOTE to prevent overflow
         g_min, g_max = (g.array.min().astype(self.full_dtype),
                         g.array.max().astype(self.full_dtype))
-        W_min, W_max = (W.array.min().astype(self.full_dtype),
-                        W.array.max().astype(self.full_dtype))
-        if self.debug_level >= 1:
-            assert not xp.isnan(g_max) and not xp.isinf(g_max)
-            assert not xp.isnan(W_max) and not xp.isinf(W_max)
         if hasattr(xp, 'asnumpy'):
             g_min = xp.asnumpy(g_min)
             g_max = xp.asnumpy(g_max)
-            W_min = xp.asnumpy(W_min)
-            W_max = xp.asnumpy(W_max)
+        o_max = np.abs([g_max, g_min]).max()
 
-        # NOTE assume zero mean
-        u_min, u_max = self.range
-        if bound_by_fan_in:
-            u_max /= self.get_fan_in(W)
+        if W is not None:
+            # print('o_sigma = {} {}'.format(o_sigma, o_sigma.dtype))
+            # print('o_mu={}'.format(g_mu * w_mu))
+            W_min, W_max = (W.array.min().astype(self.full_dtype),
+                            W.array.max().astype(self.full_dtype))
+            if hasattr(xp, 'asnumpy'):
+                W_min = xp.asnumpy(W_min)
+                W_max = xp.asnumpy(W_max)
+
+            # if self.debug_level >= 1:
+            #     assert not xp.isnan(g_max) and not xp.isinf(g_max)
+            #     assert not xp.isnan(W_max) and not xp.isinf(W_max)
+
+            if bound_by_fan_in:
+                u_max /= self.get_fan_in(W)
+
+            o_max = np.abs(
+                np.array(
+                    [g_max * W_max, g_min * W_min, g_max * W_min,
+                     g_min * W_max])).max()
 
         # NOTE: need to cast n_sigma
         n_sigma = np.array(n_sigma, dtype=self.full_dtype)
@@ -223,10 +245,6 @@ class AdaLossChainer(AdaLoss):
                                                      dtype=self.full_dtype))
         # print('min loss_scale={}'.format(loss_scale))
 
-        o_max = np.abs(
-            np.array(
-                [g_max * W_max, g_min * W_min, g_max * W_min,
-                 g_min * W_max])).max()
         if self.debug_level >= 1:
             assert not np.isnan(o_max) and not np.isinf(o_max)
 
@@ -477,7 +495,7 @@ class AdaLossChainer(AdaLoss):
 
         # NOTE: here we optionally change the dtype of the gradient
         if dtype is None:
-            dtype = self.dtype
+            dtype = g.dtype
         # change the type of scale
         scale = xp.array(scale, dtype=self.scale_dtype)
         prev_scale = xp.array(prev_scale, dtype=self.scale_dtype)
@@ -488,7 +506,13 @@ class AdaLossChainer(AdaLoss):
             scale = scale.astype(self.full_dtype)
             prev_scale = prev_scale.astype(self.full_dtype)
 
-        assert scale.dtype == g_.dtype
+        # assert scale.dtype == g_.dtype, 'Scale dtype={} does not match grad dtype={}'.format(scale.dtype, g_.dtype)
+        if scale.dtype != g_.dtype:
+            if g_.dtype == np.float32:
+                scale = scale.astype(g_.dtype)
+            else:
+                raise RuntimeError('Scale dtype={} does not match grad dtype={}'.format(scale.dtype, g_.dtype))
+
         sg_ = g_ * scale
         if self.debug_level >= 1:
             # sanity check the unscaled gradient
@@ -567,3 +591,4 @@ class AdaLossChainer(AdaLoss):
             self.set_loss_scale(g, target)
 
         return gs
+
