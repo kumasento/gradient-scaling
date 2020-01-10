@@ -288,17 +288,18 @@ def main():
     # trainer.extend(extensions.ExponentialShift('lr', 0.1, init=args.lr),
     #                trigger=triggers.ManualScheduleTrigger(
     #                    args.step, 'iteration'))
-    warmup_attr_ratio = 0.1 if args.batchsize != 32 else None
-    # NOTE: this is confusing but it means n_iter
-    warmup_n_epoch = 1000 if args.batchsize != 32 else None
-    lr_shift = chainerlp.extensions.ExponentialShift(
-        'lr',
-        0.1,
-        init=args.lr * warmup_attr_ratio,
-        warmup_attr_ratio=warmup_attr_ratio,
-        warmup_n_epoch=warmup_n_epoch,
-        schedule=args.step)
-    trainer.extend(lr_shift, trigger=(1, 'iteration'))
+    if args.batchsize != 32:
+      warmup_attr_ratio = 0.1
+      # NOTE: this is confusing but it means n_iter
+      warmup_n_epoch = 1000
+      lr_shift = chainerlp.extensions.ExponentialShift(
+          'lr',
+          0.1,
+          init=args.lr * warmup_attr_ratio,
+          warmup_attr_ratio=warmup_attr_ratio,
+          warmup_n_epoch=warmup_n_epoch,
+          schedule=args.step)
+      trainer.extend(lr_shift, trigger=(1, 'iteration'))
 
     if comm.rank == 0:
         if not args.profiling:
