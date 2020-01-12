@@ -11,6 +11,7 @@ from chainercv import utils
 
 from ada_loss.chainer_impl.ada_loss import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_cast import ada_loss_cast
+from ada_loss.chainer_impl.links.ada_loss_batch_normalization import AdaLossBatchNormalization
 
 class SegNetBasic(chainer.Chain):
 
@@ -129,7 +130,12 @@ class SegNetBasic(chainer.Chain):
             x = x[:, :, :min_h, :min_w]
             indices = indices[:, :, :min_h, :min_w]
         outsize = (x.shape[2] * 2, x.shape[3] * 2)
-        return F.upsampling_2d(x, indices.array, ksize=2, stride=2, outsize=outsize)
+
+        # appears in mixed16
+        if hasattr(indices, 'array'):
+            indices = indices.array
+
+        return F.upsampling_2d(x, indices, ksize=2, stride=2, outsize=outsize)
 
     def forward(self, x):
         """Compute an image-wise score from a batch of images
@@ -179,10 +185,13 @@ class SegNetBasic(chainer.Chain):
         h = self.conv_classifier(h)
 
         # TODO: refactorize this. Instead of hardcoding, use AdaLossScaled
-        if self.dtype != 'float32':
-            if self.type_cast_ada_loss is None:
-                self.type_cast_ada_loss = AdaLossChainer(**self.conv1_bn.ada_loss_cfg)
-            h = ada_loss_cast(h, 'float32', self.type_cast_ada_loss)
+        if self.dtype != np.float32:
+            if not isinstance(self.conv1_bn, AdaLossBatchNormalization):
+                h = F.cast(h, 'float32')
+            else:
+                if self.type_cast_ada_loss is None:
+                    self.type_cast_ada_loss = AdaLossChainer(**self.conv1_bn.ada_loss_cfg)
+                h = ada_loss_cast(h, 'float32', self.type_cast_ada_loss)
 
         return h 
 

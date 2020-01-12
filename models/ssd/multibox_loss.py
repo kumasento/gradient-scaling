@@ -71,6 +71,7 @@ def multibox_loss(mb_locs, mb_confs, gt_mb_locs, gt_mb_labels, k, comm=None):
         This function returns two :obj:`chainer.Variable`: :obj:`loc_loss` and
         :obj:`conf_loss`.
     """
+    # These two variables are in float32
     mb_locs = chainer.as_variable(mb_locs)
     mb_confs = chainer.as_variable(mb_confs)
     gt_mb_locs = chainer.as_variable(gt_mb_locs)

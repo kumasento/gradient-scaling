@@ -1,16 +1,20 @@
+import numpy as np
 import chainer
 import chainer.functions as F
 from chainer import initializers
 import chainer.links as L
 
 from ada_loss.chainer_impl.functions.ada_loss_branch import AdaLossBranch
+from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+from ada_loss.chainer_impl.functions.ada_loss_cast import ada_loss_cast
+from ada_loss.chainer_impl.links.ada_loss_convolution_2d import AdaLossConvolution2D
 
 
 def post_loc(x):
     """ Post loc convolution """
     y = F.transpose(x, (0, 2, 3, 1))
     y = F.reshape(y, (y.shape[0], -1, 4))
-    y = F.cast(y, 'float32')
+    # y = F.cast(y, 'float32')
     return y
 
 
@@ -18,7 +22,7 @@ def post_conf(mb_conf, n_class):
     """ """
     mb_conf = F.transpose(mb_conf, (0, 2, 3, 1))
     mb_conf = F.reshape(mb_conf, (mb_conf.shape[0], -1, n_class))
-    mb_conf = F.cast(mb_conf, 'float32')
+    # mb_conf = F.cast(mb_conf, 'float32')
     return mb_conf
 
 
@@ -77,6 +81,9 @@ class Multibox(chainer.Chain):
             self.post_loc = lambda x: post_loc(x)
             self.post_conf = lambda x: post_conf(x, self.n_class)
 
+        self.tc_locs = [None] * len(aspect_ratios)
+        self.tc_confs = [None] * len(aspect_ratios)
+
     def forward(self, xs):
         """Compute loc and conf from feature maps
 
@@ -104,6 +111,10 @@ class Multibox(chainer.Chain):
 
         mb_locs = []
         mb_confs = []
+
+        dtype = chainer.global_config.dtype
+
+
         for i, x in enumerate(xs):
             # TODO: can we don't refer to AdaLossBranch here? Maybe turn it to a
             # general forward function?
@@ -111,11 +122,24 @@ class Multibox(chainer.Chain):
             loc = getattr(self, 'loc_{}'.format(i))
             mb_loc = loc(x1)
             mb_loc = self.post_loc(mb_loc)
-            mb_locs.append(mb_loc)
 
             conf = getattr(self, 'conf_{}'.format(i))
             mb_conf = conf(x2)
             mb_conf = self.post_conf(mb_conf)
+
+            if dtype != np.float32:
+                if not isinstance(loc, AdaLossConvolution2D):
+                    mb_loc = F.cast(mb_loc, 'float32')
+                    mb_conf = F.cast(mb_conf, 'float32')
+                else:
+                    if self.tc_locs[i] is None:
+                        self.tc_locs[i] = AdaLossChainer(**loc.ada_loss_cfg)
+                    if self.tc_confs[i] is None:
+                        self.tc_confs[i] = AdaLossChainer(**loc.ada_loss_cfg)
+                    mb_loc = ada_loss_cast(mb_loc, 'float32', self.tc_locs[i])
+                    mb_conf = ada_loss_cast(mb_conf, 'float32', self.tc_confs[i])
+
+            mb_locs.append(mb_loc)
             mb_confs.append(mb_conf)
 
         mb_locs = self.concat_locs(mb_locs)

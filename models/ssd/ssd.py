@@ -10,6 +10,10 @@ from models.ssd import MultiboxCoder
 from models.ssd import Normalize
 from chainercv import transforms
 
+from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+from ada_loss.chainer_impl.functions.ada_loss_cast import ada_loss_cast
+from ada_loss.chainer_impl.links.ada_loss_convolution_2d import AdaLossConvolution2D
+
 
 class SSD(chainer.Chain):
     """Base class of Single Shot Multibox Detector.
@@ -84,13 +88,15 @@ class SSD(chainer.Chain):
         super().__init__()
         self.mean = mean
         self.use_preset('visualize')
+        self.dtype = chainer.global_config.dtype
 
         with self.init_scope():
             self.extractor = extractor
             self.multibox = multibox
+            # NOTE: Type casting happens here
             self.norm_ = Normalize(512, initial=initializers.Constant(20))
             self.norm = lambda x: self.norm_(x)
-
+        self.type_cast_ada_loss = None
         self.coder = MultiboxCoder(extractor.grids, multibox.aspect_ratios,
                                    steps, sizes, variance)
 
@@ -131,7 +137,19 @@ class SSD(chainer.Chain):
         ys = list(ys)
         # for i in range(len(ys)):
         #     ys[i] = F.cast(ys[i], 'float32')
-        ys[0] = self.norm(ys[0])
+        # TODO: refactorize this. Instead of hardcoding, use AdaLossScaled
+
+
+        if self.dtype != np.float32:
+            if not isinstance(self.extractor.conv1_1, AdaLossConvolution2D):
+                y = F.cast(ys[0], 'float32')
+            else:
+                if self.type_cast_ada_loss is None:
+                    self.type_cast_ada_loss = AdaLossChainer(**self.extractor.conv1_1.ada_loss_cfg)
+                y = ada_loss_cast(ys[0], 'float32', self.type_cast_ada_loss)
+
+
+        ys[0] = self.norm(y)
         ys = tuple(ys)
         return self.multibox(ys)
 

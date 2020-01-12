@@ -31,6 +31,7 @@ class AdaLossConvolution2D(L.Convolution2D):
 
         if ada_loss_cfg is None:
             ada_loss_cfg = {}
+        self.ada_loss_cfg = ada_loss_cfg
         self.ada_loss = AdaLossChainer(**ada_loss_cfg)
 
     def forward(self, x):

@@ -5,10 +5,10 @@ import copy
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('snapshot_dir', type=str)
+  parser.add_argument('snapshot', type=str)
   args = parser.parse_args()
 
-  npz_file = np.load(os.path.join(args.snapshot_dir, 'snapshot_model.npz'))
+  npz_file = np.load(args.snapshot)
   d = {}
 
   for key in npz_file.keys():
@@ -17,7 +17,9 @@ def main():
     print(key, new_key)
     d[new_key] = val 
 
-  np.savez(os.path.join(args.snapshot_dir, 'new_snapshot_model.npz'), **d)
+  file_name = args.snapshot.split('/')[-1]
+  new_file_name = 'new_' + file_name
+  np.savez(os.path.join(os.path.dirname(args.snapshot), new_file_name), **d)
 
 
 if __name__ == '__main__':

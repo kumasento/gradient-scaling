@@ -46,7 +46,6 @@ class Normalize(chainer.Link):
             chainer.Variable:
             The shape and :obj:`dtype` are same as those of input.
         """
-        x = F.cast(x, 'float32')
         x = F.normalize(x, eps=self.eps, axis=1)
         scale = F.broadcast_to(self.scale[:, np.newaxis, np.newaxis], x.shape)
         return F.cast(x * scale, chainer.get_dtype())

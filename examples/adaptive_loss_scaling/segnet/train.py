@@ -42,6 +42,13 @@ except ImportError:
     pass
 
 
+def get_snapshot_model(model):
+    if hasattr(model.predictor, 'link'):
+        return model.predictor.link
+    return model.predictor
+
+
+
 def recalculate_bn_statistics(model, batchsize, dtype='float32'):
     train = CamVidDataset(split='train')
     it = chainer.iterators.SerialIterator(
@@ -94,10 +101,12 @@ def main():
     parser.add_argument('--gpu', type=int, default=-1)
     parser.add_argument('--batchsize', type=int, default=12)
     parser.add_argument('--class-weight', type=str, default='class_weight.npy')
+    parser.add_argument('--val-iter', type=int, default=2000)
     parser.add_argument('--out', type=str, default='result')
     parser.add_argument('--iter', type=int, default=16000)
     parser.add_argument('--dtype', type=str, default='float32')
     parser.add_argument('--init-scale', type=float, default=1.0)
+    parser.add_argument('--n-uf', type=float, default=1e-5)
     parser.add_argument('--dynamic-interval', type=int, default=None)
     parser.add_argument('--loss-scale-method', type=str, default='approx_range')
     parser.add_argument('--verbose', action='store_true', default=False)
@@ -109,7 +118,7 @@ def main():
 
     # Triggers
     log_trigger = (50, 'iteration')
-    validation_trigger = (2000, 'iteration')
+    validation_trigger = (args.val_iter, 'iteration')
     end_trigger = (args.iter, 'iteration')
 
     # Dataset
@@ -127,24 +136,25 @@ def main():
     model = SegNetBasic(n_class=len(camvid_label_names), dtype=dtypes[args.dtype])
     
     # adaptive loss scaling
-    recorder = AdaLossRecorder(sample_per_n_iter=100)
-    model = AdaLossScaled(
-        model,
-        init_scale=args.init_scale,
-        transforms=[
-            AdaLossTransformLinear(),
-            AdaLossTransformConvolution2D(),
-            AdaLossTransformBatchNormalization(),
-        ],
-        cfg={
-          'loss_scale_method': args.loss_scale_method,
-          'scale_upper_bound': 65504,
-          'accum_upper_bound': 65504,
-          'update_per_n_iteration': 100,
-          'recorder': recorder,
-          'n_uf_threshold': 1e-3,
-        },
-        verbose=args.verbose)
+    if args.dtype != 'float32':
+        recorder = AdaLossRecorder(sample_per_n_iter=100)
+        model = AdaLossScaled(
+            model,
+            init_scale=args.init_scale,
+            transforms=[
+                AdaLossTransformLinear(),
+                AdaLossTransformConvolution2D(),
+                AdaLossTransformBatchNormalization(),
+            ],
+            cfg={
+              'loss_scale_method': args.loss_scale_method,
+              'scale_upper_bound': 65504,
+              'accum_upper_bound': 65504,
+              'update_per_n_iteration': 100,
+              'recorder': recorder,
+              'n_uf_threshold': args.n_uf,
+            },
+            verbose=args.verbose)
 
     model = PixelwiseSoftmaxClassifier(
         model, class_weight=class_weight)
@@ -196,11 +206,19 @@ def main():
 
     trainer.extend(extensions.LogReport(trigger=log_trigger))
     trainer.extend(extensions.observe_lr(), trigger=log_trigger)
-    trainer.extend(extensions.observe_value(
-        'loss_scale',
-        lambda trainer: trainer.updater.get_optimizer('main')._loss_scale),
-                   trigger=log_trigger)
+    if args.dtype != 'float32':
+        trainer.extend(extensions.observe_value(
+            'loss_scale',
+            lambda trainer: trainer.updater.get_optimizer('main')._loss_scale),
+                       trigger=log_trigger)
     trainer.extend(extensions.dump_graph('main/loss'))
+    # snapshot the trainer after each 
+    trainer.extend(extensions.snapshot(),
+                   trigger=validation_trigger) 
+    # snapshot the model itself
+    trainer.extend(extensions.snapshot_object(
+        get_snapshot_model(model), 'model_iter_{.updater.iteration}'),
+                   trigger=validation_trigger)
 
     if extensions.PlotReport.available():
         trainer.extend(extensions.PlotReport(
@@ -210,12 +228,13 @@ def main():
             ['validation/main/miou'], x_key='iteration',
             file_name='miou.png'))
 
-    trainer.extend(extensions.PrintReport(
-        ['epoch', 'iteration', 'elapsed_time', 'lr', 'loss_scale',
-         'main/loss', 'validation/main/miou',
-         'validation/main/mean_class_accuracy',
-         'validation/main/pixel_accuracy']),
-        trigger=log_trigger)
+    metrics = ['epoch', 'iteration', 'elapsed_time', 'lr',
+               'main/loss', 'validation/main/miou',
+               'validation/main/mean_class_accuracy',
+               'validation/main/pixel_accuracy']
+    if args.dtype != 'float32':
+        metrics.append('loss_scale')
+    trainer.extend(extensions.PrintReport(metrics), trigger=log_trigger)
     trainer.extend(extensions.ProgressBar(update_interval=10))
 
     trainer.extend(
@@ -223,21 +242,32 @@ def main():
             val_iter, model.predictor,
             camvid_label_names),
         trigger=validation_trigger)
+    # snapshot the best validation result
+    trainer.extend(extensions.snapshot_object(get_snapshot_model(model), 'model_best'),
+                   trigger=chainer.training.triggers.MaxValueTrigger(
+                       'validation/main/miou', trigger=validation_trigger))
 
-    hook = AdaLossMonitor(sample_per_n_iter=100,
-                          verbose=args.verbose,
-                          includes=['Grad', 'Deconvolution'])
-    recorder.trainer = trainer
-    hook.trainer = trainer
+    hooks = []
+    if args.dtype != 'float32':
+        hook = AdaLossMonitor(sample_per_n_iter=100,
+                              verbose=args.verbose,
+                              includes=['Grad', 'Deconvolution'])
+        recorder.trainer = trainer
+        hook.trainer = trainer
+
+        hooks.append(hook)
 
     with ExitStack() as stack:
-        stack.enter_context(hook)
+        for hook in hooks:
+            stack.enter_context(hook)
         trainer.run()
 
     chainer.serializers.save_npz(
         os.path.join(args.out, 'snapshot_model.npz'),
-        recalculate_bn_statistics(model.predictor, 24, dtype=args.dtype))
-    recorder.export().to_csv(os.path.join(args.out, 'loss_scale.csv'))
+        recalculate_bn_statistics(model.predictor, args.batchsize, dtype=args.dtype))
+
+    if args.dtype != 'float32':
+        recorder.export().to_csv(os.path.join(args.out, 'loss_scale.csv'))
 
 if __name__ == '__main__':
     main()

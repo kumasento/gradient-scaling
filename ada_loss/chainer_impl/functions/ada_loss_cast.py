@@ -24,6 +24,8 @@ class AdaLossCastFunction(chainer.function_node.FunctionNode):
             xp = chainer.backend.get_array_module(g[0].array)
             nnz_1 = xp.count_nonzero(g[0].array) / g[0].array.size
 
+            # np.save('grad.npy', xp.asnumpy(g[0].array))
+
             gx, prev_scale = self.ada_loss.loss_scaling(g[0])
             loss_scale = gx.__dict__['loss_scale']
 
@@ -32,8 +34,8 @@ class AdaLossCastFunction(chainer.function_node.FunctionNode):
 
             nnz_2 = xp.count_nonzero(gx.array) / gx.array.size
 
-            # print('{} {:.6f} {:.6f} {:.6f}'.format(
-            #     loss_scale, xp.asnumpy(nnz_1), xp.asnumpy(nnz_2), xp.asnumpy(nnz_1 - nnz_2)))
+            # print('{} {} {:.6f} {:.6f} {:.6f}'.format(
+            #     loss_scale, gx.array.size, xp.asnumpy(nnz_1), xp.asnumpy(nnz_2), xp.asnumpy(nnz_1 - nnz_2)))
         return gx,
 
 def ada_loss_cast(x, typ, ada_loss):
