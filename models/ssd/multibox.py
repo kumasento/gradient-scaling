@@ -137,7 +137,7 @@ class Multibox(chainer.Chain):
                     if self.tc_confs[i] is None:
                         self.tc_confs[i] = AdaLossChainer(**loc.ada_loss_cfg)
                     mb_loc = ada_loss_cast(mb_loc, 'float32', self.tc_locs[i])
-                    mb_conf = ada_loss_cast(mb_conf, 'float32', self.tc_confs[i])
+                    mb_conf = ada_loss_cast(mb_conf, 'float32', self.tc_confs[i], lognormal=True)
 
             mb_locs.append(mb_loc)
             mb_confs.append(mb_conf)

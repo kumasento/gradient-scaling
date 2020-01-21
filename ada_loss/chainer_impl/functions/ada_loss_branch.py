@@ -35,5 +35,6 @@ class AdaLossBranch(function_node.FunctionNode):
                 gs = self.ada_loss.rescaling(gs)
             g = sum(gs)
             self.ada_loss.set_loss_scale(g, self.ada_loss.grad_loss_scale(gs[0]))
+            # print(self.ada_loss.grad_loss_scale(gs[0]))
 
         return g,

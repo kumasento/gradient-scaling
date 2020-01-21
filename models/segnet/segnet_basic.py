@@ -191,7 +191,7 @@ class SegNetBasic(chainer.Chain):
             else:
                 if self.type_cast_ada_loss is None:
                     self.type_cast_ada_loss = AdaLossChainer(**self.conv1_bn.ada_loss_cfg)
-                h = ada_loss_cast(h, 'float32', self.type_cast_ada_loss)
+                h = ada_loss_cast(h, 'float32', self.type_cast_ada_loss, lognormal=True)
 
         return h 
 

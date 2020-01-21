@@ -198,6 +198,7 @@ def main():
             'profiler': profiler,
             'sanity_checker': sanity_checker,
             'n_uf_threshold': args.n_uf,
+            # 'power_of_two': False,
         },
         transforms=[
             AdaLossTransformLinear(),
@@ -317,11 +318,15 @@ def main():
             'loss_scale',
             lambda trainer: trainer.updater.get_optimizer('main')._loss_scale),
                        trigger=log_interval)
-        trainer.extend(extensions.PrintReport([
-            'epoch', 'iteration', 'loss_scale', 'lr', 'main/loss',
+
+        metrics = [
+            'epoch', 'iteration', 'lr', 'main/loss',
             'main/loss/loc', 'main/loss/conf', 'validation/main/map'
-        ]),
-                       trigger=log_interval)
+        ]
+        if args.dynamic_interval is not None:
+            metrics.insert(2, 'loss_scale')
+
+        trainer.extend(extensions.PrintReport(metrics), trigger=log_interval)
         trainer.extend(extensions.ProgressBar(update_interval=10))
 
         trainer.extend(extensions.snapshot(),

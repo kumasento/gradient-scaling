@@ -5,6 +5,7 @@ import math
 from timeit import default_timer as timer
 
 import numpy as np
+from scipy.special import erfinv
 import chainer
 import chainer.functions as F
 from chainer import utils
@@ -139,7 +140,7 @@ class AdaLossChainer(AdaLoss):
 
         return loss_scale
 
-    def get_mean_and_std(self, X):
+    def get_mean_and_std(self, X, lognormal=False):
         """ Get the mean and variance of a chainer variable """
         X_ = X.array
 
@@ -147,9 +148,14 @@ class AdaLossChainer(AdaLoss):
         if self.debug_level >= 1:
             assert not xp.isnan(X_).any() and not xp.isinf(X_).any()
 
+        # X_ = X_[xp.logical_and(X_ < threshold, X_ > - threshold)]
+
         if X.dtype != self.full_dtype:
             # Now X_ and X.array are two different things
             X_ = X_.astype(self.full_dtype)
+        if lognormal:
+            X_ = xp.log(xp.abs(X_[X_ != 0]))
+
         mu, sigma = X_.mean(), X_.std()
 
         if hasattr(xp, 'asnumpy'):
@@ -185,6 +191,7 @@ class AdaLossChainer(AdaLoss):
                                        g,
                                        W=None,
                                        n_sigma=1e-2,
+                                       lognormal=False,
                                        bound_by_fan_in=True):
         """ """
         xp = chainer.backend.get_array_module(g)
@@ -194,9 +201,10 @@ class AdaLossChainer(AdaLoss):
         # calculate the statistics
         calc_stat_start = timer()
         if W is not None:
+            # lognormal won't be applied in this branch
             _, o_sigma = self.get_mean_and_std_of_product(g, W)
         else:
-            o_mu, o_sigma = self.get_mean_and_std(g)
+            o_mu, o_sigma = self.get_mean_and_std(g, lognormal=lognormal)
         calc_stat_end = timer()
         if self.profiler is not None:
             self.profiler.add_time('calc_stat', calc_stat_end - calc_stat_start)
@@ -234,12 +242,21 @@ class AdaLossChainer(AdaLoss):
                 np.array(
                     [g_max * W_max, g_min * W_min, g_max * W_min,
                      g_min * W_max])).max()
+            # NOTE: assuming the existence of ReLU 
+            o_sigma *= np.sqrt(0.5 * self.get_fan_in(W))
 
         # NOTE: need to cast n_sigma
         n_sigma = np.array(n_sigma, dtype=self.full_dtype)
 
-        # TODO: refactorize
-        loss_scale = u_min / (self.n_uf_threshold * o_sigma)
+        # TODO: refactorize 
+        if lognormal and W is None:
+            loss_scale = np.exp(
+                    np.log(u_min.astype(self.full_dtype)) -
+                    o_mu -
+                    o_sigma * np.sqrt(2) * erfinv(2 * self.n_uf - 1).astype(self.full_dtype))
+            # assert not np.isnan(loss_scale) and not np.isinf(loss_scale)
+        else:
+            loss_scale = u_min / (self.n_uf_threshold * o_sigma)
         # constrain to 1.
         loss_scale = np.maximum(loss_scale, np.array(1.0,
                                                      dtype=self.full_dtype))
@@ -556,32 +573,40 @@ class AdaLossChainer(AdaLoss):
         scales = list(sorted(scales))
         target = None
 
-        # search from the largest to the smallest
-        max_gs = []
-        for g in gs:
-            xp = chainer.backend.get_array_module(g.array)
-            max_gs.append(xp.max(xp.abs(g.array)).astype(
-                    self.full_dtype))
+        if not self.is_updating:
+            target = self.loss_scales[-1]
 
-        for scale in scales[::-1]:
-            is_overflow = False
-            # check whether this scale will not cause overflow
-            if max(max_gs) * scale < self.range[1]:
-                target = scale
-                break
+        else:
+            # search from the largest to the smallest
+            max_gs = []
+            for g in gs:
+                xp = chainer.backend.get_array_module(g.array)
+                max_gs.append(
+                        xp.max(xp.abs(g.array)).astype(self.full_dtype) /
+                        self.grad_loss_scale(g).astype(self.full_dtype))
 
-        # TODO: take care of this case
-        # TODO: refactorize
-        if target is None:
-            # temporarily, we search for smaller scales
-            scale_ = min(scales)
-            while scale_ >= 1 / 8:
-                if max(max_gs) * scale_ < self.range[1]:
+            for scale in scales[::-1]:
+                is_overflow = False
+                # check whether this scale will not cause overflow
+                if max(max_gs) * scale < self.range[1]:
+                    target = scale
                     break
-                scale_ /= 2
-            target = scale_
-        if max(max_gs) * target >= self.range[1]:
-            raise ValueError('Cannot find a suitable target for max gradients: {}'.format(max_gs))
+
+            # TODO: take care of this case
+            # TODO: refactorize
+            if target is None:
+                # temporarily, we search for smaller scales
+                scale_ = min(scales)
+                while scale_ >= 1 / 8:
+                    if max(max_gs) * scale_ < self.range[1]:
+                        break
+                    scale_ /= 2
+                target = scale_
+            if max(max_gs) * target >= self.range[1]:
+                raise ValueError('Cannot find a suitable target for max gradients: {}'.format(max_gs))
+            self.loss_scales.append(target)
+
+        # print(target)
 
         # run rescaling
         for g in gs:

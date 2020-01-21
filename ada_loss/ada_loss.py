@@ -98,14 +98,14 @@ class AdaLoss(object):
 
     def get_u_min(self, dtype):
         if dtype == 'float16' or dtype == np.float16:
-            return 6e-8
+            return 6.0e-8
         elif dtype == 'float32' or dtype == np.float32:
             return 1e-23
         raise ValueError('dtype cannot be recognized: {}'.format(dtype))
 
     def get_u_max(self, dtype):
         if dtype == 'float16' or dtype == np.float16:
-            return 6e4
+            return 65504
         elif dtype == 'float32' or dtype == np.float32:
             return 1e23
         raise ValueError('dtype cannot be recognized: {}'.format(dtype))
@@ -157,7 +157,7 @@ class AdaLoss(object):
             loss scale. """
         return self.cur_iter % self.update_per_n_iteration == 0
 
-    def get_unbound_loss_scale(self, g, W=None, prev_scale=None):
+    def get_unbound_loss_scale(self, g, W=None, prev_scale=None, lognormal=False):
         """ Get the loss scale for the current layer. """
         # TODO: Refactorize this piece
         if not self.is_updating:
@@ -173,8 +173,9 @@ class AdaLoss(object):
                     prev_scale=prev_scale,
                     max_rescue_ratio=self.max_rescue_ratio)
             elif self.loss_scale_method == 'approx_range':
+                # TODO: we might be able to place lognormal somewhere else?
                 loss_scale = self.get_loss_scale_by_approx_range(
-                    g, W, n_sigma=self.n_sigma)
+                    g, W, n_sigma=self.n_sigma, lognormal=lognormal)
             elif self.loss_scale_method == 'abs_range':
                 loss_scale = self.get_loss_scale_by_abs_range(g, W)
             elif self.loss_scale_method == 'fixed':
@@ -194,20 +195,22 @@ class AdaLoss(object):
 
         return loss_scale
 
-    def get_loss_scale(self, g, W=None, prev_scale=None):
+    def get_loss_scale(self, g, W=None, prev_scale=None, lognormal=False):
         # preliminary results
-        loss_scale = self.get_unbound_loss_scale(g, W=None, prev_scale=prev_scale)
+        loss_scale = self.get_unbound_loss_scale(
+                g, W=None, prev_scale=prev_scale, lognormal=lognormal)
         self.record_loss_scale('unbound', loss_scale)
 
         # if self.loss_scale_method == 'fixed':
         #     return loss_scale
-        if self.use_bound:
-            loss_scale = self.bound_loss_scale_by_heuristics(
-                loss_scale, W=W, prev_scale=prev_scale)
-            self.record_loss_scale('bound', loss_scale)
-        if self.power_of_two:
-            loss_scale = self.get_power_of_two_scale(loss_scale)
-            self.record_loss_scale('power_of_two', loss_scale)
+        if self.loss_scale_method == 'approx_range':
+            if self.use_bound:
+                loss_scale = self.bound_loss_scale_by_heuristics(
+                    loss_scale, W=W, prev_scale=prev_scale)
+                self.record_loss_scale('bound', loss_scale)
+            if self.power_of_two:
+                loss_scale = self.get_power_of_two_scale(loss_scale)
+                self.record_loss_scale('power_of_two', loss_scale)
 
         loss_scale = loss_scale.astype(self.scale_dtype)
         self.record_loss_scale('final', loss_scale)
@@ -239,7 +242,7 @@ class AdaLoss(object):
 
         return pot_scale.astype(self.scale_dtype)  # cast back
 
-    def loss_scaling(self, g, W=None):
+    def loss_scaling(self, g, W=None, lognormal=False):
         """ Called to calculate the loss scale.
 
             This API works specifically for GEMM based operations.
@@ -250,7 +253,9 @@ class AdaLoss(object):
         total_start = timer()
 
         prev_scale = self.get_prev_scale(g)
-        scale = self.get_loss_scale(g, W=W, prev_scale=prev_scale)
+        scale = self.get_loss_scale(
+                g, W=W, prev_scale=prev_scale, lognormal=lognormal)
+        # print(scale)
         # u_grad = self.get_unscaled_gradient(g, prev_scale)
         grad = self.get_scaled_gradient(g, scale, prev_scale=prev_scale)
 

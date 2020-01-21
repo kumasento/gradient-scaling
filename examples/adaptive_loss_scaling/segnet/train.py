@@ -2,8 +2,10 @@ import argparse
 from collections import defaultdict
 import os
 from contextlib import ExitStack
+import random
 
 import chainer
+import cupy as cp
 import numpy as np
 
 from chainer.dataset import concat_examples
@@ -40,6 +42,11 @@ try:
     cv2.setNumThreads(0)
 except ImportError:
     pass
+
+np.random.seed(0)
+cp.random.seed(0)
+random.seed(0)
+chainer.global_config.cudnn_deterministic = True
 
 
 def get_snapshot_model(model):
@@ -180,6 +187,7 @@ def main():
             print('==> Using dynamic loss scaling (interval={}) ...'.format(
                 args.dynamic_interval))
             optimizer.loss_scaling(interval=args.dynamic_interval, scale=None)
+            optimizer._loss_scale_max = 32770.0
         else:
             if args.loss_scale_method == 'approx_range':
                 print('==> Using adaptive loss scaling ...')

@@ -1,6 +1,7 @@
 """ Convolution2D that supports AdaLoss """
 
 import chainer
+import numpy as np
 from chainer.utils import argument
 from chainer.functions.connection import convolution_2d
 import chainer.functions as F
@@ -53,6 +54,7 @@ class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):
         #     xp.abs(gy.array[gy.array > 0]).min(),
         #     xp.abs(gy_.array[gy_.array > 0]).min(),
         # )
+        # gyu = self.ada_loss.get_unscaled_gradient(gy, prev_scale)
 
         ret = []
         if 0 in indexes:
@@ -64,6 +66,15 @@ class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):
                                                     outsize=(xh, xw),
                                                     dilate=(self.dy, self.dx),
                                                     groups=self.groups)
+            # gx2_ = chainer.functions.deconvolution_2d(F.cast(gy, 'float32'),
+            #                                          F.cast(W, 'float32'),
+            #                                          stride=(self.sy, self.sx),
+            #                                          pad=(self.ph, self.pw),
+            #                                          outsize=(xh, xw),
+            #                                          dilate=(self.dy, self.dx),
+            #                                          groups=self.groups)
+            # xp = chainer.backend.get_array_module(gx2_.array)
+            # np.save('grad.npy',  xp.asnumpy(gx2_.array))
             if (self.ada_loss.sanity_checker and
                 self.ada_loss.recorder.current_iteration % self.ada_loss.sanity_checker.check_per_n_iter == 0):
                 curr_iter = self.ada_loss.recorder.current_iteration
@@ -98,11 +109,14 @@ class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):
             gW, = convolution_2d.Convolution2DGradW(self).apply((x, gy))
             gW_ = self.ada_loss.get_unscaled_gradient(gW, prev_scale)
             ret.append(gW_)
+            # gW, = convolution_2d.Convolution2DGradW(self).apply((x, gyu))
+            # ret.append(gW)
         if 2 in indexes:
             gb = chainer.functions.sum(gy, axis=(0, 2, 3))
             gb_ = self.ada_loss.get_unscaled_gradient(gb, prev_scale)
-            # ret.append(F.cast(gW_, W.dtype))
             ret.append(gb_)
+            # gb = chainer.functions.sum(gyu, axis=(0, 2, 3))
+            # ret.append(gb)
 
         return ret
 
