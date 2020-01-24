@@ -49,7 +49,7 @@ def plot_loss_scale_dist(train_dir, ax):
 
   # all loss scales
   # we only take care of the case when key equals to 'final'
-  arr = df[df['key'] == 'final']['val'].values
+  arr = df[(df['key'] == 'final') & (df['label'] == 'AdaLossConvolution2DFunction')]['val'].values
   arr = arr.reshape([len(iters), N])
   arr = arr[:, ::-1] # reverse layer ID
 
