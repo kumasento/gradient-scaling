@@ -156,6 +156,9 @@ class AdaLossChainer(AdaLoss):
         if lognormal:
             X_ = xp.log(xp.abs(X_[X_ != 0]))
 
+        if X.size == 0:
+          return None, None
+
         mu, sigma = X_.mean(), X_.std()
 
         if hasattr(xp, 'asnumpy'):
@@ -202,12 +205,15 @@ class AdaLossChainer(AdaLoss):
         calc_stat_start = timer()
         if W is not None:
             # lognormal won't be applied in this branch
-            _, o_sigma = self.get_mean_and_std_of_product(g, W)
+            o_mu, o_sigma = self.get_mean_and_std_of_product(g, W)
         else:
             o_mu, o_sigma = self.get_mean_and_std(g, lognormal=lognormal)
         calc_stat_end = timer()
         if self.profiler is not None:
             self.profiler.add_time('calc_stat', calc_stat_end - calc_stat_start)
+
+        if o_mu is None and o_sigma is None:
+          return np.array(1.0, dtype=self.full_dtype)
 
         # NOTE: it is possible that o_sigma is 0.
         # e.g., a all-zero gradient.
