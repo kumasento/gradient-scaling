@@ -1,6 +1,23 @@
-# Adaptive Loss Scaling for Mixed Precision Training
+# Reducing Underflow in Mixed Precision Training by Gradient Scaling
 
 This project implements the _adaptive loss scaling_ method to improve the performance of [mixed precision training](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html).
+
+```bibtex
+@inproceedings{ijcai2020-404,
+  title     = {Reducing Underflow in Mixed Precision Training by Gradient Scaling},
+  author    = {Zhao, Ruizhe and Vogel, Brian and Ahmed, Tanvir and Luk, Wayne},
+  booktitle = {Proceedings of the Twenty-Ninth International Joint Conference on
+               Artificial Intelligence, {IJCAI-20}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},             
+  editor    = {Christian Bessiere}	
+  pages     = {2922--2928},
+  year      = {2020},
+  month     = {7},
+  note      = {Main track}
+  doi       = {10.24963/ijcai.2020/404},
+  url       = {https://doi.org/10.24963/ijcai.2020/404},
+}
+```
 
 ## Introduction
 
