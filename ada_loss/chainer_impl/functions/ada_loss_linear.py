@@ -1,17 +1,16 @@
 """ Linear function that supports adaptive loss scaling. """
 
-import math
-import numpy as np
 import functools
+import math
 
 import chainer
 import chainer.functions as F
+import numpy as np
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from chainer import utils
 
 # to be inherited
 from chainer.functions.connection import linear
-
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
 
 
 class AdaLossLinearFunction(linear.LinearFunction):

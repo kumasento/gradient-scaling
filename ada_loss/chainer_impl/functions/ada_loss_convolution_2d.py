@@ -1,12 +1,11 @@
 """ Convolution2D that supports AdaLoss """
 
 import chainer
-import numpy as np
-from chainer.utils import argument
-from chainer.functions.connection import convolution_2d
 import chainer.functions as F
-
-from ..ada_loss import AdaLossChainer
+import numpy as np
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
+from chainer.functions.connection import convolution_2d
+from chainer.utils import argument
 
 
 class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):

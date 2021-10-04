@@ -1,8 +1,9 @@
 """ Define the class for adaptive loss scaling. """
 
+from timeit import default_timer as timer
+
 import numpy as np
 from scipy.special import erfinv
-from timeit import default_timer as timer
 
 
 class AdaLoss(object):
@@ -200,7 +201,7 @@ class AdaLoss(object):
     def get_loss_scale(self, g, W=None, prev_scale=None, lognormal=False):
         # preliminary results
         loss_scale = self.get_unbound_loss_scale(
-            g, W=None, prev_scale=prev_scale, lognormal=lognormal
+            g, W=W, prev_scale=prev_scale, lognormal=lognormal
         )
         self.record_loss_scale("unbound", loss_scale)
 
@@ -212,9 +213,9 @@ class AdaLoss(object):
                     loss_scale, W=W, prev_scale=prev_scale
                 )
                 self.record_loss_scale("bound", loss_scale)
-            if self.power_of_two:
-                loss_scale = self.get_power_of_two_scale(loss_scale)
-                self.record_loss_scale("power_of_two", loss_scale)
+        if self.power_of_two:
+            loss_scale = self.get_power_of_two_scale(loss_scale)
+            self.record_loss_scale("power_of_two", loss_scale)
 
         loss_scale = loss_scale.astype(self.scale_dtype)
         self.record_loss_scale("final", loss_scale)

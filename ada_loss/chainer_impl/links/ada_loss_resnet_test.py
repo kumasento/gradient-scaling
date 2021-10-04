@@ -1,15 +1,15 @@
 import unittest
-import numpy as np
-import chainer
-import chainer.links as L
-import chainer.functions as F
-from chainer import testing
 
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
+from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
 from ada_loss.chainer_impl.links.ada_loss_resnet import (
     AdaLossBasicBlock,
     AdaLossBottleneckBlock,
 )
-from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
+from chainer import testing
 
 
 class AdaLossBasicBlockTest(unittest.TestCase):

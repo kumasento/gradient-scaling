@@ -2,10 +2,9 @@
 
 import chainer
 import chainer.functions as F
-from chainer.utils import argument
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from chainer.functions.normalization import batch_normalization
-
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+from chainer.utils import argument
 
 
 class AdaLossBatchNormalization(batch_normalization.BatchNormalization):

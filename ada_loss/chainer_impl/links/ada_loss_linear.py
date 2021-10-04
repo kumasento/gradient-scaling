@@ -1,12 +1,11 @@
 """ The linear link that supports adaptive loss scaling. """
 
 import chainer
-import chainer.links as L
 import chainer.functions as F
-from chainer import utils
-
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+import chainer.links as L
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_linear import ada_loss_linear
+from chainer import utils
 
 
 class AdaLossLinear(L.Linear):

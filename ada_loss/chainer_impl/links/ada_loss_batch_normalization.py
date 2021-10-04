@@ -1,14 +1,12 @@
 import chainer
 import chainer.links as L
-from chainer import configuration
-from chainer import functions
-from chainer.utils import argument
-
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_batch_normalization import (
     ada_loss_batch_normalization,
     ada_loss_fixed_batch_normalization,
 )
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+from chainer import configuration, functions
+from chainer.utils import argument
 
 
 class AdaLossBatchNormalization(L.BatchNormalization):

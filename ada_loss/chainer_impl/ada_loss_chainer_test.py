@@ -1,11 +1,11 @@
 import unittest
-import numpy as np
-import chainer
-import chainer.links as L
-import chainer.functions as F
-from chainer import testing
 
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
+from chainer import testing
 
 np.random.seed(0)
 
@@ -169,8 +169,8 @@ class AdaLossChainerTest(unittest.TestCase):
 
     def test_get_mean_and_std_of_product(self):
         dtype = np.float16
-        X_data = np.random.normal(size=16).astype(dtype)
-        Y_data = np.random.normal(size=16).astype(dtype)
+        X_data = np.random.normal(size=100, loc=0.1).astype(dtype)
+        Y_data = np.random.normal(size=100, loc=0.1).astype(dtype)
         X = chainer.Variable(X_data)
         Y = chainer.Variable(Y_data)
 
@@ -189,16 +189,18 @@ class AdaLossChainerTest(unittest.TestCase):
         self.assertEqual(mu.dtype, np.float32)
         self.assertEqual(sigma.dtype, np.float32)
 
+        print(X_mu * Y_mu)
+        print(mu)
         self.assertTrue(np.allclose(X_mu * Y_mu, mu))
-        self.assertTrue(
-            np.allclose(
-                np.sqrt(
-                    (X_sigma ** 2 + X_mu ** 2) * (Y_sigma ** 2 + Y_mu ** 2)
-                    - (X_mu * Y_mu) ** 2
-                ).astype(np.float32),
-                sigma,
-            )
+
+        sigma_ = (
+            np.sqrt(
+                (X_sigma ** 2 + X_mu ** 2) * (Y_sigma ** 2 + Y_mu ** 2)
+                - (X_mu * Y_mu) ** 2
+            ),
         )
+        print(sigma_, sigma)
+        self.assertTrue(np.allclose(sigma_, sigma, rtol=1e-3))
 
     def _test_get_loss_scale_by_approx_range(self, g_sigma, W_sigma, dtype):
         g_data = np.random.normal(scale=g_sigma, size=(32, 32)).astype(dtype)
@@ -255,8 +257,8 @@ class AdaLossChainerTest(unittest.TestCase):
             chainer.Variable(np.random.normal(size=16)),
             chainer.Variable(np.random.normal(size=16)),
         ]
-        gs[0].__dict__["loss_scale"] = 1
-        gs[1].__dict__["loss_scale"] = 2
+        gs[0].__dict__["loss_scale"] = np.float32(1)
+        gs[1].__dict__["loss_scale"] = np.float32(2)
 
         ada_loss = AdaLossChainer()
         gs = ada_loss.rescaling(gs)
@@ -269,8 +271,8 @@ class AdaLossChainerTest(unittest.TestCase):
             chainer.Variable(np.random.normal(size=16)),
             chainer.Variable(np.random.normal(size=16)),
         ]
-        gs[0].__dict__["loss_scale"] = 65536
-        gs[1].__dict__["loss_scale"] = 2
+        gs[0].__dict__["loss_scale"] = np.float32(65536)
+        gs[1].__dict__["loss_scale"] = np.float32(2)
         gs = ada_loss.rescaling(gs)
         self.assertEqual(gs[0].__dict__["loss_scale"], 2)
 

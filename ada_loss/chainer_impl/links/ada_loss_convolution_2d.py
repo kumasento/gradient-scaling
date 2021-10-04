@@ -1,7 +1,6 @@
 import chainer
 import chainer.links as L
-
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_convolution_2d import (
     ada_loss_convolution_2d,
 )

@@ -1,13 +1,13 @@
 """ Check the correctness of AdaLossBranch """
 import unittest
-import numpy as np
-import chainer
-import chainer.links as L
-import chainer.functions as F
-from chainer import testing
 
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_branch import AdaLossBranch
+from chainer import testing
 
 np.random.seed(0)
 
@@ -33,11 +33,11 @@ class AdaLossBranchTest(unittest.TestCase):
             ys[i].grad_var = chainer.Variable(
                 np.random.normal(size=16).astype(np.float16)
             )
-            ys[i].grad_var.__dict__["loss_scale"] = 2
+            ys[i].grad_var.__dict__["loss_scale"] = np.float32(2)
 
         # NOTE: seems backward all gradients
         ys[0].backward()
-        self.assertEqual(x.grad_var.__dict__["loss_scale"], 2)
+        self.assertEqual(x.grad_var.__dict__["loss_scale"], np.float32(2))
 
         # Overflow case
         x = chainer.Variable(np.random.normal(size=16).astype(np.float16))
@@ -45,9 +45,9 @@ class AdaLossBranchTest(unittest.TestCase):
         gs = [np.random.normal(size=16).astype(np.float16) for _ in range(n)]
         for i in range(n):
             ys[i].grad_var = chainer.Variable(gs[i])
-            ys[i].grad_var.__dict__["loss_scale"] = 2
+            ys[i].grad_var.__dict__["loss_scale"] = np.float32(2)
 
-        ys[0].grad_var.__dict__["loss_scale"] = 65536
+        ys[0].grad_var.__dict__["loss_scale"] = np.float32(65536)
         ys[0].backward()
         self.assertEqual(x.grad_var.__dict__["loss_scale"], 2)
 

@@ -1,13 +1,13 @@
 import unittest
-import numpy as np
-import chainer
-import chainer.links as L
-import chainer.functions as F
-from chainer import testing
 
-from ada_loss.chainer_impl.ada_loss import AdaLossChainer
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_linear import ada_loss_linear
 from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
+from chainer import testing
 
 np.random.seed(0)
 

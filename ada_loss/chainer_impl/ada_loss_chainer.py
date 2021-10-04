@@ -1,14 +1,13 @@
-from ..ada_loss import AdaLoss
-
 import functools
 import math
 from timeit import default_timer as timer
 
-import numpy as np
-from scipy.special import erfinv
 import chainer
 import chainer.functions as F
+import numpy as np
+from ada_loss.core import AdaLoss
 from chainer import utils
+from scipy.special import erfinv
 
 
 class AdaLossChainer(AdaLoss):
@@ -177,7 +176,7 @@ class AdaLossChainer(AdaLoss):
         X_mu, X_sigma = self.get_mean_and_std(X)
         Y_mu, Y_sigma = self.get_mean_and_std(Y)
 
-        # O_mu = X_mu * Y_mu
+        O_mu = X_mu * Y_mu
         O_var = (X_sigma ** 2 + X_mu ** 2) * (Y_sigma ** 2 + Y_mu ** 2)  # - (O_mu)**2)
 
         if self.debug_level >= 1 and (O_var < 0 or np.isnan(O_var) or np.isinf(O_var)):
@@ -191,7 +190,7 @@ class AdaLossChainer(AdaLoss):
         if self.debug_level >= 1:
             assert not np.isnan(O_sigma) and not np.isinf(O_sigma)
 
-        return 0, O_sigma
+        return X_mu * Y_mu, O_sigma
 
     def get_loss_scale_by_approx_range(
         self, g, W=None, n_sigma=1e-2, lognormal=False, bound_by_fan_in=True

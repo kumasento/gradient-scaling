@@ -1,9 +1,8 @@
 """ A function node that replicate the input to multiple branches. """
 
 import chainer
+from ada_loss.chainer_impl.ada_loss_chainer import AdaLossChainer
 from chainer import function_node
-
-from ..ada_loss import AdaLossChainer
 
 
 class AdaLossBranch(function_node.FunctionNode):

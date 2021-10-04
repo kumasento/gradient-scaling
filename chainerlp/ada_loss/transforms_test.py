@@ -1,20 +1,20 @@
 """ Test the base AdaLoss class. """
 
 import unittest
-import numpy as np
-import cupy as cp
+
 import chainer
-import chainer.links as L
 import chainer.functions as F
+import chainer.links as L
+import cupy as cp
+import numpy as np
 from chainer import testing
 from chainer.testing import attr
-
 from chainerlp.ada_loss.transforms import *
 from chainerlp.links import *
 from chainerlp.links.models.resnet import BasicBlock
 
-from ada_loss.chainer.ada_loss_scaled import AdaLossScaled
-from ada_loss.chainer.ada_loss_transforms import *
+from ada_loss.chainer_impl.ada_loss_scaled import AdaLossScaled
+from ada_loss.chainer_impl.ada_loss_transforms import *
 
 
 class TransformsTest(unittest.TestCase):
