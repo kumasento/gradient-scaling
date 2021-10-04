@@ -9,6 +9,10 @@ jobs:
       max-parallel: 5
 
     steps:
+    - name: Setup dependencies
+      run: |
+        sudo apt install mpich --yes
+
     - uses: actions/checkout@v2
     - name: Set up Python 3.7
       uses: actions/setup-python@v2
