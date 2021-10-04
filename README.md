@@ -2,6 +2,8 @@
 
 This project implements the _adaptive loss scaling_ method to improve the performance of [mixed precision training](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html).
 
+The old repository: https://github.com/ada-loss/ada-loss
+
 ```bibtex
 @inproceedings{ijcai2020-404,
   title     = {Reducing Underflow in Mixed Precision Training by Gradient Scaling},
