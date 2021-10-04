@@ -21,7 +21,6 @@ utils.set_random_seed(0)
 
 
 class TestActStatHook(unittest.TestCase):
-
     def test_forward(self):
         """ ActStatFuncHook should work properly for the forward pass
             of a model. Properly means the input data should be correctly
@@ -37,7 +36,7 @@ class TestActStatHook(unittest.TestCase):
         idx, label, in_stats, out_stats = list(hook.call_history.values())[0]
 
         self.assertEqual(idx, 1)
-        self.assertEqual(label, 'ReLU')
+        self.assertEqual(label, "ReLU")
         self.assertEqual(len(in_stats), 1)  # single input
         # check stats
         self.assertTrue(np.allclose(in_stats[0][0], data.min()))
@@ -66,7 +65,7 @@ class TestActStatHook(unittest.TestCase):
         idx, label, in_stats, out_stats = list(hook.call_history.values())[0]
 
         self.assertEqual(idx, 1)
-        self.assertEqual(label, 'ReLU')
+        self.assertEqual(label, "ReLU")
         self.assertEqual(len(in_stats), 1)  # single input
         # check stats
         self.assertTrue(np.allclose(in_stats[0][0], data.min()))
@@ -112,15 +111,16 @@ class TestActStatHook(unittest.TestCase):
 
             # check all the snapshot files, compare them with call_histories.
             for i, snapshot_name in enumerate(sorted(os.listdir(snapshot_dir))):
-                self.assertIn('_{}'.format(i + 1), snapshot_name)
+                self.assertIn("_{}".format(i + 1), snapshot_name)
 
                 fp = os.path.join(snapshot_dir, snapshot_name)
-                with open(fp, 'rb') as f:
+                with open(fp, "rb") as f:
                     call_history = pickle.load(f)
 
                 # TODO: just verify keys at this stage
-                self.assertListEqual(list(call_history.keys()),
-                                     list(call_histories[i].keys()))
+                self.assertListEqual(
+                    list(call_history.keys()), list(call_histories[i].keys())
+                )
 
     def test_trainer(self):
         """ Test a normal training procedure. """
@@ -151,11 +151,11 @@ class TestActStatHook(unittest.TestCase):
         optimizer = optimizers.MomentumSGD()
         optimizer.setup(model)
         updater = training.updaters.StandardUpdater(
-            train_iter, optimizer, device=gpu_id)
+            train_iter, optimizer, device=gpu_id
+        )
 
         with tempfile.TemporaryDirectory() as out_dir:
-            trainer = training.Trainer(
-                updater, (n_iter, 'iteration'), out=out_dir)
+            trainer = training.Trainer(updater, (n_iter, "iteration"), out=out_dir)
 
             hook = ActStatFuncHook(trainer=trainer, snapshot_dir=out_dir)
             with hook:
@@ -163,16 +163,18 @@ class TestActStatHook(unittest.TestCase):
                 hook.snapshot()  # final snapshot
 
             self.assertEqual(len(os.listdir(out_dir)), n_iter)
-            for snapshot_name in sorted(os.listdir(out_dir),
-                                        key=lambda x: int(os.path.splitext(x)[0].split('_')[-1])):
+            for snapshot_name in sorted(
+                os.listdir(out_dir),
+                key=lambda x: int(os.path.splitext(x)[0].split("_")[-1]),
+            ):
                 fp = os.path.join(out_dir, snapshot_name)
-                with open(fp, 'rb') as f:
+                with open(fp, "rb") as f:
                     call_history = pickle.load(f)
 
                 # all stats are filled
                 # TODO: for now we only test this property
                 for key, val in call_history.items():
-                    if 'Grad' not in val[1] and 'Accuracy' not in val[1]:  # label
+                    if "Grad" not in val[1] and "Accuracy" not in val[1]:  # label
                         self.assertIsNotNone(val[2])
                         self.assertIsNotNone(val[3])
 

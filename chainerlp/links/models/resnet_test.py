@@ -63,22 +63,24 @@ class ResNetTest(unittest.TestCase):
             n_class = 1000
             img_size = 224
             net = ResNet(n_layer, n_class=n_class)
-            self.assertAlmostEqual(utils.get_model_size(net) / 1e6,
-                                   self._model_sizes[n_layer],
-                                   places=1)
+            self.assertAlmostEqual(
+                utils.get_model_size(net) / 1e6, self._model_sizes[n_layer], places=1
+            )
         else:
             n_class = 10
             img_size = 32
             net = ResNetCIFAR(n_layer, n_class=n_class)
             self.assertAlmostEqual(
-                utils.get_model_size(net, excludes=['gamma', 'beta']) / 1e6,
+                utils.get_model_size(net, excludes=["gamma", "beta"]) / 1e6,
                 self._model_sizes[n_layer],
-                places=1)
+                places=1,
+            )
 
         if not skip_infer:
             batch_size = 2
-            data = np.random.random(
-                (batch_size, 3, img_size, img_size)).astype(np.float32)
+            data = np.random.random((batch_size, 3, img_size, img_size)).astype(
+                np.float32
+            )
             x = chainer.Variable(data)
             y = net(x)  # NOTE: should not raise error
             self.assertEqual(y.shape, (batch_size, n_class))
@@ -89,7 +91,7 @@ class ResNetTest(unittest.TestCase):
 
     def test_first_bn_mixed16(self):
         net = ResNet(18, n_class=1000, first_bn_mixed16=True)
-        self.assertEqual(net.conv1.bn.avg_mean.dtype, 'float32')
+        self.assertEqual(net.conv1.bn.avg_mean.dtype, "float32")
 
 
 testing.run_module(__name__, __file__)

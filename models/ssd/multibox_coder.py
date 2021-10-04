@@ -67,11 +67,11 @@ class MultiboxCoder(object):
 
     def __init__(self, grids, aspect_ratios, steps, sizes, variance):
         if not len(aspect_ratios) == len(grids):
-            raise ValueError('The length of aspect_ratios is wrong.')
+            raise ValueError("The length of aspect_ratios is wrong.")
         if not len(steps) == len(grids):
-            raise ValueError('The length of steps is wrong.')
+            raise ValueError("The length of steps is wrong.")
         if not len(sizes) == len(grids) + 1:
-            raise ValueError('The length of sizes is wrong.')
+            raise ValueError("The length of sizes is wrong.")
 
         default_bbox = []
 
@@ -88,10 +88,8 @@ class MultiboxCoder(object):
 
                 s = sizes[k]
                 for ar in aspect_ratios[k]:
-                    default_bbox.append(
-                        (cy, cx, s / np.sqrt(ar), s * np.sqrt(ar)))
-                    default_bbox.append(
-                        (cy, cx, s * np.sqrt(ar), s / np.sqrt(ar)))
+                    default_bbox.append((cy, cx, s / np.sqrt(ar), s * np.sqrt(ar)))
+                    default_bbox.append((cy, cx, s * np.sqrt(ar), s / np.sqrt(ar)))
 
         # (center_y, center_x, height, width)
         self._default_bbox = np.stack(default_bbox)
@@ -106,7 +104,8 @@ class MultiboxCoder(object):
 
     def to_gpu(self, device=None):
         self._default_bbox = chainer.backends.cuda.to_gpu(
-            self._default_bbox, device=device)
+            self._default_bbox, device=device
+        )
 
     def encode(self, bbox, label, iou_thresh=0.5):
         """Encodes coordinates and classes of bounding boxes.
@@ -141,13 +140,18 @@ class MultiboxCoder(object):
         if len(bbox) == 0:
             return (
                 xp.zeros(self._default_bbox.shape, dtype=np.float32),
-                xp.zeros(self._default_bbox.shape[0], dtype=np.int32))
+                xp.zeros(self._default_bbox.shape[0], dtype=np.int32),
+            )
 
         iou = utils.bbox_iou(
-            xp.hstack((
-                self._default_bbox[:, :2] - self._default_bbox[:, 2:] / 2,
-                self._default_bbox[:, :2] + self._default_bbox[:, 2:] / 2)),
-            bbox)
+            xp.hstack(
+                (
+                    self._default_bbox[:, :2] - self._default_bbox[:, 2:] / 2,
+                    self._default_bbox[:, :2] + self._default_bbox[:, 2:] / 2,
+                )
+            ),
+            bbox,
+        )
 
         index = xp.empty(len(self._default_bbox), dtype=int)
         # -1 is for background
@@ -172,10 +176,12 @@ class MultiboxCoder(object):
         mb_bbox[:, :2] += mb_bbox[:, 2:] / 2
 
         mb_loc = xp.empty_like(mb_bbox)
-        mb_loc[:, :2] = (mb_bbox[:, :2] - self._default_bbox[:, :2]) / \
-            (self._variance[0] * self._default_bbox[:, 2:])
-        mb_loc[:, 2:] = xp.log(mb_bbox[:, 2:] / self._default_bbox[:, 2:]) / \
-            self._variance[1]
+        mb_loc[:, :2] = (mb_bbox[:, :2] - self._default_bbox[:, :2]) / (
+            self._variance[0] * self._default_bbox[:, 2:]
+        )
+        mb_loc[:, 2:] = (
+            xp.log(mb_bbox[:, 2:] / self._default_bbox[:, 2:]) / self._variance[1]
+        )
 
         # [0, n_fg_class - 1] -> [1, n_fg_class]
         mb_label = label[index] + 1
@@ -224,8 +230,7 @@ class MultiboxCoder(object):
 
         # (center_y, center_x, height, width)
         mb_bbox = self._default_bbox.copy()
-        mb_bbox[:, :2] += mb_loc[:, :2] * self._variance[0] \
-            * self._default_bbox[:, 2:]
+        mb_bbox[:, :2] += mb_loc[:, :2] * self._variance[0] * self._default_bbox[:, 2:]
         mb_bbox[:, 2:] *= xp.exp(mb_loc[:, 2:] * self._variance[1])
 
         # (center_y, center_x, height, width) -> (y_min, x_min, height, width)
@@ -250,8 +255,7 @@ class MultiboxCoder(object):
             score_l = score_l[mask]
 
             if nms_thresh is not None:
-                indices = utils.non_maximum_suppression(
-                    bbox_l, nms_thresh, score_l)
+                indices = utils.non_maximum_suppression(bbox_l, nms_thresh, score_l)
                 bbox_l = bbox_l[indices]
                 score_l = score_l[indices]
 

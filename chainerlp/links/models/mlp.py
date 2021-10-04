@@ -13,13 +13,9 @@ from chainercv.links import PickableSequentialChain
 
 
 class MLP(PickableSequentialChain):
-    def __init__(self,
-                 n_layer,
-                 n_unit,
-                 n_out,
-                 n_in=None,
-                 use_batchnorm=False,
-                 **kwargs):
+    def __init__(
+        self, n_layer, n_unit, n_out, n_in=None, use_batchnorm=False, **kwargs
+    ):
         super().__init__()
 
         with self.init_scope():
@@ -30,20 +26,17 @@ class MLP(PickableSequentialChain):
                 n_in_ = n_in if i == 0 else n_unit
 
                 # node id is simply the current layer ID
-                layer = L.Linear(n_in_,
-                                 n_unit_,
-                                 initialW=I.HeNormal(),
-                                 **kwargs)
-                name = 'l{}'.format(i + 1)
+                layer = L.Linear(n_in_, n_unit_, initialW=I.HeNormal(), **kwargs)
+                name = "l{}".format(i + 1)
                 setattr(self, name, layer)
 
                 if use_batchnorm:
-                    setattr(self, name + '_bn', L.BatchNormalization(n_unit_))
+                    setattr(self, name + "_bn", L.BatchNormalization(n_unit_))
 
                 # activation
                 if i != n_layer - 1:
                     activ = lambda x: F.relu(x)
-                    setattr(self, name + '_relu', activ)
+                    setattr(self, name + "_relu", activ)
 
 
 # class AdaLossMLP(PickableSequentialChain):

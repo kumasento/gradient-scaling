@@ -1,6 +1,6 @@
 import chainer
 
-state_keys = ['loss_scale']
+state_keys = ["loss_scale"]
 
 
 class IdentityLossScalingHook(chainer.function_node.FunctionNode):

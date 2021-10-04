@@ -10,7 +10,11 @@ from chainer import utils
 from chainer.utils import type_check
 import chainerx
 
-from chainer.functions.connection.linear import LinearFunction, LinearGradData, LinearGradWeight
+from chainer.functions.connection.linear import (
+    LinearFunction,
+    LinearGradData,
+    LinearGradWeight,
+)
 
 from chainerlp.functions.math.threshold import Threshold
 
@@ -31,9 +35,11 @@ class ThresholdedLinearFunction(LinearFunction):
         else:
             (x, W), b = inputs, None
 
-        if (isinstance(x, numpy.ndarray)
-                and not (x.flags.c_contiguous or x.flags.f_contiguous)
-                and 1 in x.shape):
+        if (
+            isinstance(x, numpy.ndarray)
+            and not (x.flags.c_contiguous or x.flags.f_contiguous)
+            and 1 in x.shape
+        ):
             x = numpy.ascontiguousarray(x)
 
         xp = cuda.get_array_module(x)
@@ -46,21 +52,21 @@ class ThresholdedLinearFunction(LinearFunction):
         # NOTE: we re-use the threshold node
         # Here might have memory issue since the multiplication result
         # of shape (N, M, K) is retained.
-        y_ = self.threshold_func.apply((xp.multiply(x_, W_), ))[0]
+        y_ = self.threshold_func.apply((xp.multiply(x_, W_),))[0]
         y = xp.sum(y_.array, axis=2)
 
         if len(inputs) == 3:
             self.static_add_bias(inputs=[b], outputs=[y])
 
         self.retain_inputs((0, 1))  # b is not retained
-        return y,
+        return (y,)
 
     def backward(self, indexes, grad_outputs):
         x, W = self.get_retained_inputs()
         N, K = x.shape
         M = W.shape[0]
 
-        gy, = grad_outputs
+        (gy,) = grad_outputs
         ret = []
 
         # duplicate gy into k copies
@@ -69,13 +75,13 @@ class ThresholdedLinearFunction(LinearFunction):
 
         # calculate the gradient after passing through the threshold function
         # NOTE: indexes are not useful here
-        ggy_, = self.threshold_func.backward(indexes, (gy_, ))
+        (ggy_,) = self.threshold_func.backward(indexes, (gy_,))
 
         if 0 in indexes:
-            gx, = _LinearGradData().apply((W, ggy_))
+            (gx,) = _LinearGradData().apply((W, ggy_))
             ret.append(chainer.functions.cast(gx, x.dtype))
         if 1 in indexes:
-            gW, = _LinearGradWeight(W.dtype).apply((x, ggy_))
+            (gW,) = _LinearGradWeight(W.dtype).apply((x, ggy_))
             ret.append(chainer.functions.cast(gW, W.dtype))
         if 2 in indexes:
             gb = chainer.functions.sum(gy, axis=0)
@@ -93,14 +99,17 @@ class _LinearGradWeight(LinearGradWeight):
         x, gy = inputs  # gy has shape N x M x K, which is also ggy
         xp = cuda.get_array_module(x)
 
-        if (isinstance(gy, numpy.ndarray)
-                and not (gy.flags.c_contiguous or gy.flags.f_contiguous)
-                and 1 in gy.shape):
+        if (
+            isinstance(gy, numpy.ndarray)
+            and not (gy.flags.c_contiguous or gy.flags.f_contiguous)
+            and 1 in gy.shape
+        ):
             gy = numpy.ascontiguousarray(gy)
 
-        gW = xp.sum(xp.multiply(gy, x.reshape((x.shape[0], 1, x.shape[1]))),
-                    axis=0).astype(self._w_dtype, copy=False)
-        return gW,
+        gW = xp.sum(
+            xp.multiply(gy, x.reshape((x.shape[0], 1, x.shape[1]))), axis=0
+        ).astype(self._w_dtype, copy=False)
+        return (gW,)
 
     def backward(self, indexes, grad_outputs):
         """ """
@@ -117,13 +126,15 @@ class _LinearGradData(LinearGradData):
         W, gy = inputs
         xp = cuda.get_array_module(W)
 
-        if (isinstance(gy, numpy.ndarray)
-                and not (gy.flags.c_contiguous or gy.flags.f_contiguous)
-                and 1 in gy.shape):
+        if (
+            isinstance(gy, numpy.ndarray)
+            and not (gy.flags.c_contiguous or gy.flags.f_contiguous)
+            and 1 in gy.shape
+        ):
             gy = numpy.ascontiguousarray(gy)
 
         gx = xp.sum(xp.multiply(gy, W), axis=1).astype(gy.dtype, copy=False)
-        return gx,
+        return (gx,)
 
     def backward(self, indexes, grad_outputs):
         """ """
@@ -133,7 +144,7 @@ class _LinearGradData(LinearGradData):
 def thresholded_linear(x, W, b=None, n_batch_axes=1, threshold=6e-8):
     """ """
     if n_batch_axes <= 0:
-        raise ValueError('n_batch_axes should be greater than 0.')
+        raise ValueError("n_batch_axes should be greater than 0.")
     if n_batch_axes > 1:
         batch_shape = x.shape[:n_batch_axes]
         batch_size = utils.size_of_shape(batch_shape)
@@ -145,7 +156,7 @@ def thresholded_linear(x, W, b=None, n_batch_axes=1, threshold=6e-8):
     else:
         args = x, W, b
 
-    y, = ThresholdedLinearFunction(threshold=threshold).apply(args)
+    (y,) = ThresholdedLinearFunction(threshold=threshold).apply(args)
     if n_batch_axes > 1:
-        y = y.reshape(batch_shape + (-1, ))
+        y = y.reshape(batch_shape + (-1,))
     return y

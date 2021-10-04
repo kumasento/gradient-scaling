@@ -17,22 +17,22 @@ class Threshold(function_node.FunctionNode):
         self.x_min = x_min
 
     def check_type_forward(self, in_types):
-        type_check._argname(in_types, ('x', ))
-        x_type, = in_types
-        type_check.expect(x_type.dtype.kind == 'f')
+        type_check._argname(in_types, ("x",))
+        (x_type,) = in_types
+        type_check.expect(x_type.dtype.kind == "f")
 
     def forward_cpu(self, x):
-        self.retain_inputs((0, ))  # keep input data
+        self.retain_inputs((0,))  # keep input data
         # TODO: might be able to optimize
-        return utils.force_array((numpy.abs(x[0]) >= self.x_min) * x[0]),
+        return (utils.force_array((numpy.abs(x[0]) >= self.x_min) * x[0]),)
 
     def forward_gpu(self, x):
-        self.retain_inputs((0, ))
+        self.retain_inputs((0,))
         # TODO: might be able to optimize
-        return (cuda.cupy.abs(x[0]) >= self.x_min) * x[0],
+        return ((cuda.cupy.abs(x[0]) >= self.x_min) * x[0],)
 
     def backward(self, indexes, grad_outputs):
-        x, = self.get_retained_inputs()
+        (x,) = self.get_retained_inputs()
         return ThresholdGrad(x.data, self.x_min).apply(grad_outputs)
 
 
@@ -42,21 +42,21 @@ class ThresholdGrad(function_node.FunctionNode):
         self.cond = xp.abs(x) >= x_min
 
     def check_type_forward(self, in_types):
-        type_check._argname(in_types, ('gy', ))
-        type_check.expect(in_types[0].dtype.kind == 'f')
+        type_check._argname(in_types, ("gy",))
+        type_check.expect(in_types[0].dtype.kind == "f")
 
     def forward_cpu(self, inputs):
-        return utils.force_array(inputs[0] * self.cond),
+        return (utils.force_array(inputs[0] * self.cond),)
 
     def forward_gpu(self, inputs):
-        gx = cuda.elementwise('T gy, bool cond', 'T gx',
-                              'gx = cond ? gy : T(0)',
-                              'threshold_bwd')(inputs[0], self.cond)
-        return gx,
+        gx = cuda.elementwise(
+            "T gy, bool cond", "T gx", "gx = cond ? gy : T(0)", "threshold_bwd"
+        )(inputs[0], self.cond)
+        return (gx,)
 
     def backward(self, indexes, grad_outputs):
-        return grad_outputs[0] * self.cond,
+        return (grad_outputs[0] * self.cond,)
 
 
 def threshold(x, x_min):
-    return Threshold(x_min).apply((x, ))[0]
+    return Threshold(x_min).apply((x,))[0]

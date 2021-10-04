@@ -9,10 +9,13 @@ class LossScaleHook(chainer.function_hook.FunctionHook):
 
     def backward_preprocess(self, func, in_data, out_grad):
         """ """
-        print('Preprocessing {} ...'.format(func.label))
+        print("Preprocessing {} ...".format(func.label))
         for i in range(len(in_data)):
-            print('IN[{}]: {}'.format(
-                i, in_data[i].shape if in_data[i] is not None else None))
+            print(
+                "IN[{}]: {}".format(
+                    i, in_data[i].shape if in_data[i] is not None else None
+                )
+            )
             print(in_data[i])
         print(out_grad)
 
@@ -20,7 +23,10 @@ class LossScaleHook(chainer.function_hook.FunctionHook):
         """ """
         print(func.label)
         for i in range(len(in_data)):
-            print('IN[{}]: {}'.format(
-                i, in_data[i].shape if in_data[i] is not None else None))
+            print(
+                "IN[{}]: {}".format(
+                    i, in_data[i].shape if in_data[i] is not None else None
+                )
+            )
             print(in_data[i])
         print(out_grad)

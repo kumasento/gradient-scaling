@@ -25,12 +25,12 @@ class ResNetTest(unittest.TestCase):
         n_class = 10
         img_size = 32
         net = ResNetCIFARv2(n_layer, n_class=n_class)
-        self.assertAlmostEqual(utils.get_model_size(net) / 1e6,
-                               self._model_sizes[n_layer], places=1)
+        self.assertAlmostEqual(
+            utils.get_model_size(net) / 1e6, self._model_sizes[n_layer], places=1
+        )
 
         batch_size = 2
-        data = np.random.random(
-            (batch_size, 3, img_size, img_size)).astype(np.float32)
+        data = np.random.random((batch_size, 3, img_size, img_size)).astype(np.float32)
         x = chainer.Variable(data)
         y = net(x)  # NOTE: should not raise error
         self.assertEqual(y.shape, (batch_size, n_class))

@@ -37,7 +37,6 @@ class FixupIdentity(chainer.Chain):
 
             # create the array
             self.h_zero = chainer.Variable(xp.zeros_like(h.data))
-            self.h_zero.to_device(chainer.backend.get_device_from_array(
-                h.data))
+            self.h_zero.to_device(chainer.backend.get_device_from_array(h.data))
 
         return self.h_zero

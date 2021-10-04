@@ -22,21 +22,23 @@ from chainerlp import utils
 from chainerlp.links import models
 
 
-def train_model_on_mnist(net,
-                         get_mnist=None,
-                         epoch=100,
-                         schedule=None,
-                         lr_decay=0.1,
-                         batchsize=64,
-                         learnrate=0.1,
-                         device=-1,
-                         sample_iterations=None,
-                         loss_scale=1.0,
-                         cleanup=True,
-                         hooks=None,
-                         ndim=1,
-                         recorder=None,
-                         **kwargs):
+def train_model_on_mnist(
+    net,
+    get_mnist=None,
+    epoch=100,
+    schedule=None,
+    lr_decay=0.1,
+    batchsize=64,
+    learnrate=0.1,
+    device=-1,
+    sample_iterations=None,
+    loss_scale=1.0,
+    cleanup=True,
+    hooks=None,
+    ndim=1,
+    recorder=None,
+    **kwargs
+):
     """ Train the given model on MNIST """
     # Model
     model = L.Classifier(net)
@@ -48,10 +50,9 @@ def train_model_on_mnist(net,
 
     train, test = get_mnist(ndim=ndim)
     train_iter = chainer.iterators.SerialIterator(train, batchsize)
-    test_iter = chainer.iterators.SerialIterator(test,
-                                                 batchsize,
-                                                 repeat=False,
-                                                 shuffle=False)
+    test_iter = chainer.iterators.SerialIterator(
+        test, batchsize, repeat=False, shuffle=False
+    )
 
     # Optimizer
     optimizer = chainer.optimizers.MomentumSGD(lr=learnrate)
@@ -62,13 +63,12 @@ def train_model_on_mnist(net,
     # optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(1e-4))
 
     # Set up a trainer
-    out = tempfile.mkdtemp(prefix='mnist_train-')
-    print('==> Storing temporary results to {} ...'.format(out))
-    updater = training.updaters.StandardUpdater(train_iter,
-                                                optimizer,
-                                                device=device,
-                                                loss_scale=loss_scale)
-    trainer = training.Trainer(updater, (epoch, 'epoch'), out=out)
+    out = tempfile.mkdtemp(prefix="mnist_train-")
+    print("==> Storing temporary results to {} ...".format(out))
+    updater = training.updaters.StandardUpdater(
+        train_iter, optimizer, device=device, loss_scale=loss_scale
+    )
+    trainer = training.Trainer(updater, (epoch, "epoch"), out=out)
 
     # Evaluate the model with the test dataset for each epoch
     trainer.extend(extensions.Evaluator(test_iter, model, device=device))
@@ -76,19 +76,23 @@ def train_model_on_mnist(net,
     trainer.extend(extensions.observe_lr())
     trainer.extend(extensions.LogReport())
     trainer.extend(
-        extensions.PrintReport([
-            'epoch',
-            'lr',
-            'main/loss',
-            'validation/main/loss',
-            'main/accuracy',
-            'validation/main/accuracy',
-            'elapsed_time',
-        ]))
+        extensions.PrintReport(
+            [
+                "epoch",
+                "lr",
+                "main/loss",
+                "validation/main/loss",
+                "main/accuracy",
+                "validation/main/accuracy",
+                "elapsed_time",
+            ]
+        )
+    )
     if schedule is not None:
-        trainer.extend(training.extensions.ExponentialShift(
-            'lr', lr_decay),
-                       trigger=training.triggers.ManualScheduleTrigger(schedule, 'epoch'))
+        trainer.extend(
+            training.extensions.ExponentialShift("lr", lr_decay),
+            trigger=training.triggers.ManualScheduleTrigger(schedule, "epoch"),
+        )
 
     if recorder is not None:
         recorder.setup(trainer)
@@ -99,14 +103,14 @@ def train_model_on_mnist(net,
 
     with ExitStack() as stack:
         for hook in hooks:
-            if hasattr(hook, 'trainer'):
+            if hasattr(hook, "trainer"):
                 hook.trainer = trainer  # patch the hooks
             stack.enter_context(hook)
         trainer.run()
     log = notebook_utils.load_train_log(train_dir=out)
 
     if cleanup:
-        print('==> Cleaning up {} ...'.format(out))
+        print("==> Cleaning up {} ...".format(out))
         shutil.rmtree(out)
 
     return hooks, log
@@ -167,56 +171,61 @@ class PreprocessCIFARTestData(dataset.DatasetMixin):
         return x, y
 
 
-def train_model_on_cifar(net,
-                         dataset='cifar10',
-                         n_epoch=164,
-                         batchsize=128,
-                         device=-1,
-                         learnrate=0.1,
-                         lr_decay=0.1,
-                         schedule=None,
-                         weight_decay=1e-4,
-                         manual_seed=None,
-                         warmup_attr_ratio=None,
-                         warmup_n_epoch=None,
-                         cleanup=True,
-                         tmpdir=None,
-                         recorder=None,
-                         hooks=None):
+def train_model_on_cifar(
+    net,
+    dataset="cifar10",
+    n_epoch=164,
+    batchsize=128,
+    device=-1,
+    learnrate=0.1,
+    lr_decay=0.1,
+    schedule=None,
+    weight_decay=1e-4,
+    manual_seed=None,
+    warmup_attr_ratio=None,
+    warmup_n_epoch=None,
+    cleanup=True,
+    tmpdir=None,
+    recorder=None,
+    hooks=None,
+):
     """ Train a model on the cifar dataset """
     # Mean and Std
-    _mean = np.array([0.4914, 0.4822, 0.4465],
-                     dtype=chainer.get_dtype()).reshape([3, 1, 1])
-    _std = np.array([0.2023, 0.1994, 0.2010],
-                    dtype=chainer.get_dtype()).reshape([3, 1, 1])
+    _mean = np.array([0.4914, 0.4822, 0.4465], dtype=chainer.get_dtype()).reshape(
+        [3, 1, 1]
+    )
+    _std = np.array([0.2023, 0.1994, 0.2010], dtype=chainer.get_dtype()).reshape(
+        [3, 1, 1]
+    )
     # Set up random seed
     if manual_seed is not None:
         utils.set_random_seed(manual_seed, device=device)
 
-    if dataset == 'cifar10':
-        print('Using CIFAR10 dataset.')
+    if dataset == "cifar10":
+        print("Using CIFAR10 dataset.")
         class_labels = 10
         train, test = chainer.datasets.get_cifar10()
         mean = _mean
         std = _std
-    elif dataset == 'cifar100':
-        print('Using CIFAR100 dataset.')
+    elif dataset == "cifar100":
+        print("Using CIFAR100 dataset.")
         class_labels = 100
         train, test = chainer.datasets.get_cifar100()
-        mean = np.array([0.5071, 0.4867, 0.4408],
-                        dtype=chainer.get_dtype()).reshape([3, 1, 1])
-        std = np.array([0.2675, 0.2565, 0.2761],
-                       dtype=chainer.get_dtype()).reshape([3, 1, 1])
+        mean = np.array([0.5071, 0.4867, 0.4408], dtype=chainer.get_dtype()).reshape(
+            [3, 1, 1]
+        )
+        std = np.array([0.2675, 0.2565, 0.2761], dtype=chainer.get_dtype()).reshape(
+            [3, 1, 1]
+        )
     else:
-        raise RuntimeError('Invalid dataset choice.')
+        raise RuntimeError("Invalid dataset choice.")
 
     train = PreprocessCIFARTrainData(train, mean=mean, std=std)
     test = PreprocessCIFARTestData(test, mean=mean, std=std)
     train_iter = chainer.iterators.SerialIterator(train, batchsize)
-    test_iter = chainer.iterators.SerialIterator(test,
-                                                 batchsize,
-                                                 repeat=False,
-                                                 shuffle=False)
+    test_iter = chainer.iterators.SerialIterator(
+        test, batchsize, repeat=False, shuffle=False
+    )
 
     # Model initialisation
     model = L.Classifier(net)
@@ -229,7 +238,7 @@ def train_model_on_cifar(net,
     optimizer = chainer.optimizers.MomentumSGD(learnrate)
 
     if chainer.get_dtype() == chainer.mixed16:
-        print('==> Using FP32 update for dtype=mixed16')
+        print("==> Using FP32 update for dtype=mixed16")
         optimizer.use_fp32_update()  # by default use fp32 update
         # TODO: loss scaling
 
@@ -237,15 +246,13 @@ def train_model_on_cifar(net,
     optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(weight_decay))
 
     # Setting up the trigger for stopping training
-    stop_trigger = (n_epoch, 'epoch')
+    stop_trigger = (n_epoch, "epoch")
 
     # Set up a trainer
     if tmpdir is None:
-        tmpdir = '/tmp'
-    out = tempfile.mkdtemp(prefix='{}_train-'.format(dataset), dir=tmpdir)
-    updater = training.updaters.StandardUpdater(train_iter,
-                                                optimizer,
-                                                device=device)
+        tmpdir = "/tmp"
+    out = tempfile.mkdtemp(prefix="{}_train-".format(dataset), dir=tmpdir)
+    updater = training.updaters.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, stop_trigger, out=out)
 
     if recorder is not None:
@@ -255,25 +262,32 @@ def train_model_on_cifar(net,
     trainer.extend(extensions.Evaluator(test_iter, model, device=device))
     trainer.extend(extensions.observe_lr())
     trainer.extend(
-        extensions.PrintReport([
-            'epoch',
-            'lr',
-            'main/loss',
-            'validation/main/loss',
-            'main/accuracy',
-            'validation/main/accuracy',
-            'elapsed_time',
-        ]))
-    trainer.extend(extensions.snapshot(
-        filename='snapshot_epoch_{.updater.epoch}', snapshot_on_error=True),
-                   trigger=(1, 'epoch'))
+        extensions.PrintReport(
+            [
+                "epoch",
+                "lr",
+                "main/loss",
+                "validation/main/loss",
+                "main/accuracy",
+                "validation/main/accuracy",
+                "elapsed_time",
+            ]
+        )
+    )
+    trainer.extend(
+        extensions.snapshot(
+            filename="snapshot_epoch_{.updater.epoch}", snapshot_on_error=True
+        ),
+        trigger=(1, "epoch"),
+    )
     lr_shift = chainerlp.extensions.ExponentialShift(
-        'lr',
+        "lr",
         lr_decay,
         warmup_attr_ratio=warmup_attr_ratio,
         warmup_n_epoch=warmup_n_epoch,
-        schedule=schedule)
-    trainer.extend(lr_shift, trigger=(1, 'epoch'))
+        schedule=schedule,
+    )
+    trainer.extend(lr_shift, trigger=(1, "epoch"))
     trainer.extend(extensions.ProgressBar())
 
     # RUN
@@ -281,14 +295,14 @@ def train_model_on_cifar(net,
         hooks = []
     with ExitStack() as stack:
         for hook in hooks:
-            if hasattr(hook, 'trainer'):
+            if hasattr(hook, "trainer"):
                 hook.trainer = trainer  # patch the hooks
             stack.enter_context(hook)
         trainer.run()
     log = notebook_utils.load_train_log(train_dir=out)
 
     if cleanup:
-        print('==> Cleaning up {} ...'.format(out))
+        print("==> Cleaning up {} ...".format(out))
         shutil.rmtree(out)
 
     return hooks, log

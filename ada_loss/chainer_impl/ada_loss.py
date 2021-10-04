@@ -14,14 +14,15 @@ from chainer import utils
 class AdaLossChainer(AdaLoss):
     """ The implementation of the adaptive loss scaling method in Chainer """
 
-    _loss_scale_key = 'loss_scale'
+    _loss_scale_key = "loss_scale"
 
     def get_fan_in(self, W):
         if len(W.shape) == 2:
             return np.array(W.shape[0], dtype=self.full_dtype).item()
         else:
-            return np.array(W.shape[0] * W.shape[2] * W.shape[3],
-                            dtype=self.full_dtype).item()  # deconv
+            return np.array(
+                W.shape[0] * W.shape[2] * W.shape[3], dtype=self.full_dtype
+            ).item()  # deconv
 
     def get_matrices_to_be_multiplied(self, g, W):
         """ Need to preprocess inputs to turn them into matrices  """
@@ -36,22 +37,20 @@ class AdaLossChainer(AdaLoss):
             return new_g_, new_W_
 
         raise ValueError(
-            'g and W shape cannot be transformed to matrices: {} and {}'.format(
-                g.shape, W.shape))
+            "g and W shape cannot be transformed to matrices: {} and {}".format(
+                g.shape, W.shape
+            )
+        )
 
-    def get_element_wise_multiply(self,
-                                  g,
-                                  W,
-                                  filter_zero=True,
-                                  cast_to_fp32=True):
+    def get_element_wise_multiply(self, g, W, filter_zero=True, cast_to_fp32=True):
         """ Get the result for element-wise multiplying g and W """
         g_, W_ = self.get_matrices_to_be_multiplied(g, W)
 
         xp = chainer.backend.get_array_module(g_)
         if xp.isnan(g_).any():
-            raise ValueError('Input gradient contains NaN')
+            raise ValueError("Input gradient contains NaN")
         if xp.isnan(W_).any():
-            raise ValueError('Input weight contains NaN')
+            raise ValueError("Input weight contains NaN")
 
         N, K = g_.shape
         M = W_.shape[1]
@@ -61,7 +60,7 @@ class AdaLossChainer(AdaLoss):
         We_ = W_.T.reshape((1, M, K)).repeat(N, axis=0).flatten()
         # NOTE: this may not be necessary for fp32 update
         if cast_to_fp32:
-            ge_, We_ = ge_.astype('float32'), We_.astype('float32')
+            ge_, We_ = ge_.astype("float32"), We_.astype("float32")
 
         # run multiplication
         gW_ = xp.multiply(ge_, We_)
@@ -72,17 +71,19 @@ class AdaLossChainer(AdaLoss):
 
         return gW_
 
-    def get_loss_scale_by_element_wise_range(self,
-                                             g,
-                                             W,
-                                             max_rescue_ratio=None,
-                                             cast_to_fp32=True,
-                                             bound_by_fan_in=True,
-                                             norm_upper_bound=1024,
-                                             scale_upper_bound=16,
-                                             prev_scale=None):
+    def get_loss_scale_by_element_wise_range(
+        self,
+        g,
+        W,
+        max_rescue_ratio=None,
+        cast_to_fp32=True,
+        bound_by_fan_in=True,
+        norm_upper_bound=1024,
+        scale_upper_bound=16,
+        prev_scale=None,
+    ):
         """ Scale the loss by the given range. """
-        assert cast_to_fp32, 'We only support FP32 mode element-wise analysis'
+        assert cast_to_fp32, "We only support FP32 mode element-wise analysis"
         assert self.range[0] is not None and self.range[1] is not None
 
         # get element-wise results for further analysis
@@ -91,19 +92,20 @@ class AdaLossChainer(AdaLoss):
         if len(res) == 0:
             # NOTE: temporarily do nothing
             # return 1.0,
-            print('g = \n{}'.format(g.array))
-            print('W = \n{}'.format(W.array))
+            print("g = \n{}".format(g.array))
+            print("W = \n{}".format(W.array))
             raise RuntimeError(
-                'There should be non-zero result from multiplying g and W element-wise, got: {}'
-                .format(len(res)))
+                "There should be non-zero result from multiplying g and W element-wise, got: {}".format(
+                    len(res)
+                )
+            )
 
         xp = chainer.backend.get_array_module(res)
 
         # take absolute
         res = xp.abs(res)
         if xp.isnan(res).any():
-            raise ValueError(
-                'NaN appeared in the element-wise multiplication result.')
+            raise ValueError("NaN appeared in the element-wise multiplication result.")
 
         # NOTE: we don't need to scale down to self.range[0], just
         # to promote values out of it
@@ -135,7 +137,7 @@ class AdaLossChainer(AdaLoss):
         loss_scale = xp.minimum(min_scales.max(), max_scales.min())
         self.check_scale(loss_scale)
 
-        if hasattr(xp, 'asnumpy'):
+        if hasattr(xp, "asnumpy"):
             loss_scale = xp.asnumpy(loss_scale)
 
         return loss_scale
@@ -157,11 +159,11 @@ class AdaLossChainer(AdaLoss):
             X_ = xp.log(xp.abs(X_[X_ != 0]))
 
         if X_.size == 0:
-          return None, None
+            return None, None
 
         mu, sigma = X_.mean(), X_.std()
 
-        if hasattr(xp, 'asnumpy'):
+        if hasattr(xp, "asnumpy"):
             mu = xp.asnumpy(mu)
             sigma = xp.asnumpy(sigma)
 
@@ -176,13 +178,14 @@ class AdaLossChainer(AdaLoss):
         Y_mu, Y_sigma = self.get_mean_and_std(Y)
 
         # O_mu = X_mu * Y_mu
-        O_var = ((X_sigma**2 + X_mu**2) * (Y_sigma**2 + Y_mu**2)) # - (O_mu)**2)
+        O_var = (X_sigma ** 2 + X_mu ** 2) * (Y_sigma ** 2 + Y_mu ** 2)  # - (O_mu)**2)
 
-        if self.debug_level >= 1 and (O_var < 0 or np.isnan(O_var) or
-                                      np.isinf(O_var)):
+        if self.debug_level >= 1 and (O_var < 0 or np.isnan(O_var) or np.isinf(O_var)):
             raise ValueError(
-                'Cannot compute the product stddev, got o_var {} X_mu {} X_sigma {} Y_mu {} Y_sigma {}'
-                .format(O_var, X_mu, X_sigma, Y_mu, Y_sigma))
+                "Cannot compute the product stddev, got o_var {} X_mu {} X_sigma {} Y_mu {} Y_sigma {}".format(
+                    O_var, X_mu, X_sigma, Y_mu, Y_sigma
+                )
+            )
 
         O_sigma = np.sqrt(O_var).astype(self.full_dtype)
         if self.debug_level >= 1:
@@ -190,12 +193,9 @@ class AdaLossChainer(AdaLoss):
 
         return 0, O_sigma
 
-    def get_loss_scale_by_approx_range(self,
-                                       g,
-                                       W=None,
-                                       n_sigma=1e-2,
-                                       lognormal=False,
-                                       bound_by_fan_in=True):
+    def get_loss_scale_by_approx_range(
+        self, g, W=None, n_sigma=1e-2, lognormal=False, bound_by_fan_in=True
+    ):
         """ """
         xp = chainer.backend.get_array_module(g)
         # NOTE assume zero mean
@@ -210,11 +210,11 @@ class AdaLossChainer(AdaLoss):
             o_mu, o_sigma = self.get_mean_and_std(g, lognormal=lognormal)
         calc_stat_end = timer()
         if self.profiler is not None:
-            self.profiler.add_time('calc_stat', calc_stat_end - calc_stat_start)
+            self.profiler.add_time("calc_stat", calc_stat_end - calc_stat_start)
 
         if o_mu is None and o_sigma is None:
-          np.save('all_zero_g.npy', g)
-          return np.array(1.0, dtype=self.full_dtype)
+            np.save("all_zero_g.npy", g)
+            return np.array(1.0, dtype=self.full_dtype)
 
         # NOTE: it is possible that o_sigma is 0.
         # e.g., a all-zero gradient.
@@ -222,9 +222,11 @@ class AdaLossChainer(AdaLoss):
             return np.array(1, dtype=self.full_dtype)
 
         # NOTE to prevent overflow
-        g_min, g_max = (g.array.min().astype(self.full_dtype),
-                        g.array.max().astype(self.full_dtype))
-        if hasattr(xp, 'asnumpy'):
+        g_min, g_max = (
+            g.array.min().astype(self.full_dtype),
+            g.array.max().astype(self.full_dtype),
+        )
+        if hasattr(xp, "asnumpy"):
             g_min = xp.asnumpy(g_min)
             g_max = xp.asnumpy(g_max)
         o_max = np.abs([g_max, g_min]).max()
@@ -232,9 +234,11 @@ class AdaLossChainer(AdaLoss):
         if W is not None:
             # print('o_sigma = {} {}'.format(o_sigma, o_sigma.dtype))
             # print('o_mu={}'.format(g_mu * w_mu))
-            W_min, W_max = (W.array.min().astype(self.full_dtype),
-                            W.array.max().astype(self.full_dtype))
-            if hasattr(xp, 'asnumpy'):
+            W_min, W_max = (
+                W.array.min().astype(self.full_dtype),
+                W.array.max().astype(self.full_dtype),
+            )
+            if hasattr(xp, "asnumpy"):
                 W_min = xp.asnumpy(W_min)
                 W_max = xp.asnumpy(W_max)
 
@@ -246,27 +250,28 @@ class AdaLossChainer(AdaLoss):
                 u_max /= self.get_fan_in(W)
 
             o_max = np.abs(
-                np.array(
-                    [g_max * W_max, g_min * W_min, g_max * W_min,
-                     g_min * W_max])).max()
-            # NOTE: assuming the existence of ReLU 
+                np.array([g_max * W_max, g_min * W_min, g_max * W_min, g_min * W_max])
+            ).max()
+            # NOTE: assuming the existence of ReLU
             o_sigma *= np.sqrt(0.5 * self.get_fan_in(W))
 
         # NOTE: need to cast n_sigma
         n_sigma = np.array(n_sigma, dtype=self.full_dtype)
 
-        # TODO: refactorize 
+        # TODO: refactorize
         if lognormal and W is None:
             loss_scale = np.exp(
-                    np.log(u_min.astype(self.full_dtype)) -
-                    o_mu -
-                    o_sigma * np.sqrt(2) * erfinv(2 * self.n_uf - 1).astype(self.full_dtype))
+                np.log(u_min.astype(self.full_dtype))
+                - o_mu
+                - o_sigma
+                * np.sqrt(2)
+                * erfinv(2 * self.n_uf - 1).astype(self.full_dtype)
+            )
             # assert not np.isnan(loss_scale) and not np.isinf(loss_scale)
         else:
             loss_scale = u_min / (self.n_uf_threshold * o_sigma)
         # constrain to 1.
-        loss_scale = np.maximum(loss_scale, np.array(1.0,
-                                                     dtype=self.full_dtype))
+        loss_scale = np.maximum(loss_scale, np.array(1.0, dtype=self.full_dtype))
         # print('min loss_scale={}'.format(loss_scale))
 
         if self.debug_level >= 1:
@@ -281,11 +286,9 @@ class AdaLossChainer(AdaLoss):
 
         return loss_scale
 
-    def get_loss_scale_by_abs_range(self,
-                                    g,
-                                    W,
-                                    bound_by_fan_in=True,
-                                    o_min_epsilon=1e-15):
+    def get_loss_scale_by_abs_range(
+        self, g, W, bound_by_fan_in=True, o_min_epsilon=1e-15
+    ):
         """ """
         xp = chainer.backend.get_array_module(g)
         g_, W_ = xp.abs(g.array), xp.abs(W.array)
@@ -296,19 +299,24 @@ class AdaLossChainer(AdaLoss):
         if g_.size == 0 or W_.size == 0:
             return np.array(1.0, dtype=self.full_dtype)
 
-        g_min, g_max = (g_.min().astype(self.full_dtype),
-                        g_.max().astype(self.full_dtype))
-        W_min, W_max = (W_.min().astype(self.full_dtype),
-                        W_.max().astype(self.full_dtype))
+        g_min, g_max = (
+            g_.min().astype(self.full_dtype),
+            g_.max().astype(self.full_dtype),
+        )
+        W_min, W_max = (
+            W_.min().astype(self.full_dtype),
+            W_.max().astype(self.full_dtype),
+        )
 
         mm = np.array([g_min, W_min, g_max, W_max], dtype=self.full_dtype)
         bd = np.array(
             [mm[0] * mm[1], mm[0] * mm[3], mm[1] * mm[2], mm[3] * mm[2]],
-            dtype=self.full_dtype)
+            dtype=self.full_dtype,
+        )
         if np.isnan(bd).any() or np.isinf(bd.any()):
             raise ValueError(
-                'candidates contains invalid values: bd={} mm={}'.format(
-                    bd, mm))
+                "candidates contains invalid values: bd={} mm={}".format(bd, mm)
+            )
         o_min, o_max = bd.min(), bd.max()
         o_min = np.maximum(o_min, o_min_epsilon)
 
@@ -390,12 +398,12 @@ class AdaLossChainer(AdaLoss):
         """ Sanity checking scale value """
         xp = chainer.backend.get_array_module(scale)
         if xp.isnan(scale) or xp.isinf(scale):
-            raise ValueError('scale value {} is invalid'.format(scale))
+            raise ValueError("scale value {} is invalid".format(scale))
 
     def check_grad_var(self, grad_var):
         """ Sanity checking the gradient """
         if not hasattr(grad_var, self._loss_scale_key):
-            raise ValueError('grad_var should contain the key for loss scale')
+            raise ValueError("grad_var should contain the key for loss scale")
 
     def check_grad(self, g):
         """ Check the gradient array.
@@ -403,11 +411,9 @@ class AdaLossChainer(AdaLoss):
         """
         xp = chainer.backend.get_array_module(g)
         if xp.isnan(g).any():
-            raise ValueError('Gradient of shape {} has NaN element'.format(
-                g.shape))
+            raise ValueError("Gradient of shape {} has NaN element".format(g.shape))
         if xp.isinf(g).any():
-            raise ValueError('Gradient of shape {} has Inf element'.format(
-                g.shape))
+            raise ValueError("Gradient of shape {} has Inf element".format(g.shape))
 
     def bound_loss_scale_by_norm(self, scale, W):
         """ We want that the loss scale value won't change a lot the
@@ -445,14 +451,15 @@ class AdaLossChainer(AdaLoss):
         # loss_scale = xp.asnumpy(loss_scale)
 
         # BOUND BY ACCUMULATED LOSS SCALE
-        accum_bound = (np.array(self.accum_upper_bound, dtype=self.full_dtype) /
-                       np.array(prev_scale.item()))
+        accum_bound = np.array(
+            self.accum_upper_bound, dtype=self.full_dtype
+        ) / np.array(prev_scale.item())
         loss_scale = np.minimum(accum_bound, loss_scale)
 
         # HARD upper bound
         loss_scale = np.minimum(
-            np.array(self.scale_upper_bound, dtype=self.full_dtype),
-            loss_scale).astype(self.full_dtype)
+            np.array(self.scale_upper_bound, dtype=self.full_dtype), loss_scale
+        ).astype(self.full_dtype)
         if self.debug_level >= 1:
             self.check_scale(loss_scale)
 
@@ -509,11 +516,11 @@ class AdaLossChainer(AdaLoss):
 
         ug = chainer.Variable(ug_.astype(dtype))
         # unscaled, maybe not necessary
-        self.set_loss_scale(ug, xp.array(1., dtype=self.scale_dtype).item())
+        self.set_loss_scale(ug, xp.array(1.0, dtype=self.scale_dtype).item())
 
         return ug
 
-    def get_scaled_gradient(self, g, scale, prev_scale=1., dtype=None):
+    def get_scaled_gradient(self, g, scale, prev_scale=1.0, dtype=None):
         """ Scale gradient """
         xp = chainer.backend.get_array_module(g)
 
@@ -535,7 +542,11 @@ class AdaLossChainer(AdaLoss):
             if g_.dtype == np.float32:
                 scale = scale.astype(g_.dtype)
             else:
-                raise RuntimeError('Scale dtype={} does not match grad dtype={}'.format(scale.dtype, g_.dtype))
+                raise RuntimeError(
+                    "Scale dtype={} does not match grad dtype={}".format(
+                        scale.dtype, g_.dtype
+                    )
+                )
 
         sg_ = g_ * scale
         if self.debug_level >= 1:
@@ -575,7 +586,7 @@ class AdaLossChainer(AdaLoss):
             Returns:
                 A list of rescaled gradients
         """
-        assert len(gs) >= 2, 'Number of gradients should be >= 2'
+        assert len(gs) >= 2, "Number of gradients should be >= 2"
         scales = [self.grad_loss_scale(g) for g in gs]
         scales = list(sorted(scales))
         target = None
@@ -589,8 +600,9 @@ class AdaLossChainer(AdaLoss):
             for g in gs:
                 xp = chainer.backend.get_array_module(g.array)
                 max_gs.append(
-                        xp.max(xp.abs(g.array)).astype(self.full_dtype) /
-                        self.grad_loss_scale(g).astype(self.full_dtype))
+                    xp.max(xp.abs(g.array)).astype(self.full_dtype)
+                    / self.grad_loss_scale(g).astype(self.full_dtype)
+                )
 
             for scale in scales[::-1]:
                 is_overflow = False
@@ -610,7 +622,9 @@ class AdaLossChainer(AdaLoss):
                     scale_ /= 2
                 target = scale_
             if max(max_gs) * target >= self.range[1]:
-                raise ValueError('Cannot find a suitable target for max gradients: {}'.format(max_gs))
+                raise ValueError(
+                    "Cannot find a suitable target for max gradients: {}".format(max_gs)
+                )
             self.loss_scales.append(target)
 
         # print(target)
@@ -623,4 +637,3 @@ class AdaLossChainer(AdaLoss):
             self.set_loss_scale(g, target)
 
         return gs
-

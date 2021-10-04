@@ -8,11 +8,14 @@ from chainercv import utils
 
 
 def random_distort(
-        img,
-        brightness_delta=32,
-        contrast_low=0.5, contrast_high=1.5,
-        saturation_low=0.5, saturation_high=1.5,
-        hue_delta=18):
+    img,
+    brightness_delta=32,
+    contrast_low=0.5,
+    contrast_high=1.5,
+    saturation_low=0.5,
+    saturation_high=1.5,
+    hue_delta=18,
+):
     """A color related data augmentation used in SSD.
 
     This function is a combination of four augmentation methods:
@@ -68,26 +71,20 @@ def random_distort(
 
     def brightness(cv_img, delta):
         if random.randrange(2):
-            return convert(
-                cv_img,
-                beta=random.uniform(-delta, delta))
+            return convert(cv_img, beta=random.uniform(-delta, delta))
         else:
             return cv_img
 
     def contrast(cv_img, low, high):
         if random.randrange(2):
-            return convert(
-                cv_img,
-                alpha=random.uniform(low, high))
+            return convert(cv_img, alpha=random.uniform(low, high))
         else:
             return cv_img
 
     def saturation(cv_img, low, high):
         if random.randrange(2):
             cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)
-            cv_img[:, :, 1] = convert(
-                cv_img[:, :, 1],
-                alpha=random.uniform(low, high))
+            cv_img[:, :, 1] = convert(cv_img[:, :, 1], alpha=random.uniform(low, high))
             return cv2.cvtColor(cv_img, cv2.COLOR_HSV2BGR)
         else:
             return cv_img
@@ -96,8 +93,8 @@ def random_distort(
         if random.randrange(2):
             cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2HSV)
             cv_img[:, :, 0] = (
-                cv_img[:, :, 0].astype(int) +
-                random.randint(-delta, delta)) % 180
+                cv_img[:, :, 0].astype(int) + random.randint(-delta, delta)
+            ) % 180
             return cv2.cvtColor(cv_img, cv2.COLOR_HSV2BGR)
         else:
             return cv_img
@@ -117,9 +114,15 @@ def random_distort(
 
 
 def random_crop_with_bbox_constraints(
-        img, bbox, min_scale=0.3, max_scale=1,
-        max_aspect_ratio=2, constraints=None,
-        max_trial=50, return_param=False):
+    img,
+    bbox,
+    min_scale=0.3,
+    max_scale=1,
+    max_aspect_ratio=2,
+    constraints=None,
+    max_trial=50,
+    return_param=False,
+):
     """Crop an image randomly with bounding box constraints.
 
     This data augmentation is used in training of
@@ -188,8 +191,7 @@ def random_crop_with_bbox_constraints(
         )
 
     _, H, W = img.shape
-    params = [{
-        'constraint': None, 'y_slice': slice(0, H), 'x_slice': slice(0, W)}]
+    params = [{"constraint": None, "y_slice": slice(0, H), "x_slice": slice(0, W)}]
 
     if len(bbox) == 0:
         constraints = []
@@ -204,25 +206,28 @@ def random_crop_with_bbox_constraints(
             scale = random.uniform(min_scale, max_scale)
             aspect_ratio = random.uniform(
                 max(1 / max_aspect_ratio, scale * scale),
-                min(max_aspect_ratio, 1 / (scale * scale)))
+                min(max_aspect_ratio, 1 / (scale * scale)),
+            )
             crop_h = int(H * scale / np.sqrt(aspect_ratio))
             crop_w = int(W * scale * np.sqrt(aspect_ratio))
 
             crop_t = random.randrange(H - crop_h)
             crop_l = random.randrange(W - crop_w)
-            crop_bb = np.array((
-                crop_t, crop_l, crop_t + crop_h, crop_l + crop_w))
+            crop_bb = np.array((crop_t, crop_l, crop_t + crop_h, crop_l + crop_w))
 
             iou = utils.bbox_iou(bbox, crop_bb[np.newaxis])
             if min_iou <= iou.min() and iou.max() <= max_iou:
-                params.append({
-                    'constraint': (min_iou, max_iou),
-                    'y_slice': slice(crop_t, crop_t + crop_h),
-                    'x_slice': slice(crop_l, crop_l + crop_w)})
+                params.append(
+                    {
+                        "constraint": (min_iou, max_iou),
+                        "y_slice": slice(crop_t, crop_t + crop_h),
+                        "x_slice": slice(crop_l, crop_l + crop_w),
+                    }
+                )
                 break
 
     param = random.choice(params)
-    img = img[:, param['y_slice'], param['x_slice']]
+    img = img[:, param["y_slice"], param["x_slice"]]
 
     if return_param:
         return img, param
@@ -290,6 +295,6 @@ def resize_with_random_interpolation(img, size, return_param=False):
     img = cv_img.astype(np.float32).transpose((2, 0, 1))
 
     if return_param:
-        return img, {'interpolation': inter}
+        return img, {"interpolation": inter}
     else:
         return img

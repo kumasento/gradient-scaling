@@ -18,12 +18,9 @@ from chainer.training import Trainer
 class ZeroMultFuncHook(function_hook.FunctionHook):
     """ The zero-mult sampling function hook. """
 
-    name = 'ZeroMultFuncHook'
+    name = "ZeroMultFuncHook"
 
-    def __init__(self,
-                 trainer=None,
-                 sample_per_n_iteration=100,
-                 snapshot_dir=None):
+    def __init__(self, trainer=None, sample_per_n_iteration=100, snapshot_dir=None):
         """ CTOR. """
         assert isinstance(trainer, Trainer)
 
@@ -37,7 +34,7 @@ class ZeroMultFuncHook(function_hook.FunctionHook):
     @property
     def optim(self):
         optims = self.trainer.updater.get_all_optimizers()
-        return optims['main']
+        return optims["main"]
 
     @property
     def current_iteration(self):
@@ -67,7 +64,7 @@ class ZeroMultFuncHook(function_hook.FunctionHook):
             self.n_iter = self.current_iteration
             self.reset_counter()
 
-        if func.label in ['Convolution2DFunction']:
+        if func.label in ["Convolution2DFunction"]:
             self.process_convolution2d(func, in_data)
 
     def process_convolution2d(self, func, in_data):
@@ -83,14 +80,15 @@ class ZeroMultFuncHook(function_hook.FunctionHook):
         pad = 1 if ksize == 3 else 0
 
         X_ = F.im2col(X, ksize, stride=stride, pad=pad).reshape(
-            [X.shape[0], -1, X.shape[2] * X.shape[3]])
+            [X.shape[0], -1, X.shape[2] * X.shape[3]]
+        )
         X_ = F.transpose(X_, axes=(0, 2, 1)).reshape([-1, X_.shape[1]])
         X_ = X_.array
 
         W_ = W.reshape([W.shape[0], -1])
 
-        W_nz = (W_ != 0).astype('bool')
-        X_nz = (X_ != 0).astype('bool')
+        W_nz = (W_ != 0).astype("bool")
+        X_nz = (X_ != 0).astype("bool")
 
         n_zm = 0
         for i in range(W_.shape[0]):
@@ -100,15 +98,22 @@ class ZeroMultFuncHook(function_hook.FunctionHook):
             ZM = xp.logical_and(M == 0, xp.logical_and(W_nz[i, :], X_nz))
             n_zm += ZM.sum()
 
-        self.results.append([
-            self.current_epoch, self.current_iteration, func_id, func.label,
-            n_zm.item(), W_.shape[0] * X_.shape[0] * X_.shape[1]
-        ])
+        self.results.append(
+            [
+                self.current_epoch,
+                self.current_iteration,
+                func_id,
+                func.label,
+                n_zm.item(),
+                W_.shape[0] * X_.shape[0] * X_.shape[1],
+            ]
+        )
 
     def snapshot(self):
         """ Take a snapshot of zero mult results """
-        fp = os.path.join(self.snapshot_dir, 'zero_mult.csv')
+        fp = os.path.join(self.snapshot_dir, "zero_mult.csv")
         df = pd.DataFrame(
             self.results,
-            columns=['n_epoch', 'n_iter', 'func_id', 'func_label', 'n_zm', 'n_total'])
+            columns=["n_epoch", "n_iter", "func_id", "func_label", "n_zm", "n_total"],
+        )
         df.to_csv(fp)

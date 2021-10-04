@@ -14,7 +14,7 @@ from chainer import function_hook
 class ActStatLinkHook(link_hook.LinkHook):
     """ Definition of the hook that records the statistics of activation. """
 
-    name = 'ActStatFunctionHook'
+    name = "ActStatFunctionHook"
 
     def __init__(self):
         """ CTOR """
@@ -25,17 +25,25 @@ class ActStatLinkHook(link_hook.LinkHook):
         assert isinstance(args, link_hook._ForwardPostprocessCallbackArgs)
 
         link, out = args.link, args.out
-        print(link.name, type(link), out.shape,
-              out.data.min(), out.data.max(), out.data.mean(), out.data.std())
+        print(
+            link.name,
+            type(link),
+            out.shape,
+            out.data.min(),
+            out.data.max(),
+            out.data.mean(),
+            out.data.std(),
+        )
 
 
 class ActStatFuncHook(function_hook.FunctionHook):
     """ Definition of the hook that records the statistics of activation. """
 
-    name = 'ActStatFunctionHook'
+    name = "ActStatFunctionHook"
 
-    def __init__(self, trainer=None, snapshot_dir=None, snapshot_prefix='act_stat',
-                 excludes=None):
+    def __init__(
+        self, trainer=None, snapshot_dir=None, snapshot_prefix="act_stat", excludes=None
+    ):
         """ CTOR """
         self.trainer = trainer
         self.init_states()
@@ -46,7 +54,7 @@ class ActStatFuncHook(function_hook.FunctionHook):
             self.excludes = excludes
 
         self.n_iter = 0
-        self.snapshot_dir = snapshot_dir if snapshot_dir is not None else '.'
+        self.snapshot_dir = snapshot_dir if snapshot_dir is not None else "."
         self.snapshot_prefix = snapshot_prefix
 
     def init_states(self):
@@ -102,7 +110,7 @@ class ActStatFuncHook(function_hook.FunctionHook):
             For now, we look at the min, max, mean, and stddev
         """
         # convert data type before computing stddev
-        data_ = data.astype('float32')
+        data_ = data.astype("float32")
         return data.min(), data.max(), data.mean(), data_.std()
 
     def save_stats(self, func, in_stats=None, out_stats=None):
@@ -130,10 +138,12 @@ class ActStatFuncHook(function_hook.FunctionHook):
         os.makedirs(self.snapshot_dir, exist_ok=True)
         self.n_iter += 1
 
-        fp = os.path.join(self.snapshot_dir, '{}_iter_{}.pkl'.format(
-            self.snapshot_prefix, self.n_iter))
-        print('==> Saving pickled call history to {} ...'.format(fp))
-        with open(fp, 'wb') as f:
+        fp = os.path.join(
+            self.snapshot_dir,
+            "{}_iter_{}.pkl".format(self.snapshot_prefix, self.n_iter),
+        )
+        print("==> Saving pickled call history to {} ...".format(fp))
+        with open(fp, "wb") as f:
             pickle.dump(self.call_history, f)
 
         # reset states

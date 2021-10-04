@@ -51,8 +51,7 @@ class Multibox(chainer.Chain):
 
     """
 
-    def __init__(self, n_class, aspect_ratios, initialW=None,
-                 initial_bias=None):
+    def __init__(self, n_class, aspect_ratios, initialW=None, initial_bias=None):
         super(Multibox, self).__init__()
 
         self.n_class = n_class
@@ -62,19 +61,19 @@ class Multibox(chainer.Chain):
             initialW = initializers.LeCunUniform()
         if initial_bias is None:
             initial_bias = initializers.Zero()
-        init = {'initialW': initialW, 'initial_bias': initial_bias}
+        init = {"initialW": initialW, "initial_bias": initial_bias}
 
         with self.init_scope():
             # with chainer.using_config('dtype', 'float32'):
             for i, ar in enumerate(aspect_ratios):
                 n = (len(ar) + 1) * 2
-                loc_name = 'loc_{}'.format(i)
-                conf_name = 'conf_{}'.format(i)
+                loc_name = "loc_{}".format(i)
+                conf_name = "conf_{}".format(i)
 
-                setattr(self, loc_name, L.Convolution2D(n * 4, 3, pad=1,
-                                                        **init))
-                setattr(self, conf_name,
-                        L.Convolution2D(n * self.n_class, 3, pad=1, **init))
+                setattr(self, loc_name, L.Convolution2D(n * 4, 3, pad=1, **init))
+                setattr(
+                    self, conf_name, L.Convolution2D(n * self.n_class, 3, pad=1, **init)
+                )
 
             self.concat_locs = lambda xs: F.concat(xs, axis=1)
             self.concat_confs = lambda xs: F.concat(xs, axis=1)
@@ -114,30 +113,31 @@ class Multibox(chainer.Chain):
 
         dtype = chainer.global_config.dtype
 
-
         for i, x in enumerate(xs):
             # TODO: can we don't refer to AdaLossBranch here? Maybe turn it to a
             # general forward function?
             x1, x2 = AdaLossBranch().apply((x,))
-            loc = getattr(self, 'loc_{}'.format(i))
+            loc = getattr(self, "loc_{}".format(i))
             mb_loc = loc(x1)
             mb_loc = self.post_loc(mb_loc)
 
-            conf = getattr(self, 'conf_{}'.format(i))
+            conf = getattr(self, "conf_{}".format(i))
             mb_conf = conf(x2)
             mb_conf = self.post_conf(mb_conf)
 
             if dtype != np.float32:
                 if not isinstance(loc, AdaLossConvolution2D):
-                    mb_loc = F.cast(mb_loc, 'float32')
-                    mb_conf = F.cast(mb_conf, 'float32')
+                    mb_loc = F.cast(mb_loc, "float32")
+                    mb_conf = F.cast(mb_conf, "float32")
                 else:
                     if self.tc_locs[i] is None:
                         self.tc_locs[i] = AdaLossChainer(**loc.ada_loss_cfg)
                     if self.tc_confs[i] is None:
                         self.tc_confs[i] = AdaLossChainer(**loc.ada_loss_cfg)
-                    mb_loc = ada_loss_cast(mb_loc, 'float32', self.tc_locs[i])
-                    mb_conf = ada_loss_cast(mb_conf, 'float32', self.tc_confs[i], lognormal=True)
+                    mb_loc = ada_loss_cast(mb_loc, "float32", self.tc_locs[i])
+                    mb_conf = ada_loss_cast(
+                        mb_conf, "float32", self.tc_confs[i], lognormal=True
+                    )
 
             mb_locs.append(mb_loc)
             mb_confs.append(mb_conf)

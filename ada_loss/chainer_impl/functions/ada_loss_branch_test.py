@@ -31,12 +31,13 @@ class AdaLossBranchTest(unittest.TestCase):
 
         for i in range(n):
             ys[i].grad_var = chainer.Variable(
-                np.random.normal(size=16).astype(np.float16))
-            ys[i].grad_var.__dict__['loss_scale'] = 2
+                np.random.normal(size=16).astype(np.float16)
+            )
+            ys[i].grad_var.__dict__["loss_scale"] = 2
 
         # NOTE: seems backward all gradients
         ys[0].backward()
-        self.assertEqual(x.grad_var.__dict__['loss_scale'], 2)
+        self.assertEqual(x.grad_var.__dict__["loss_scale"], 2)
 
         # Overflow case
         x = chainer.Variable(np.random.normal(size=16).astype(np.float16))
@@ -44,14 +45,13 @@ class AdaLossBranchTest(unittest.TestCase):
         gs = [np.random.normal(size=16).astype(np.float16) for _ in range(n)]
         for i in range(n):
             ys[i].grad_var = chainer.Variable(gs[i])
-            ys[i].grad_var.__dict__['loss_scale'] = 2
+            ys[i].grad_var.__dict__["loss_scale"] = 2
 
-        ys[0].grad_var.__dict__['loss_scale'] = 65536
+        ys[0].grad_var.__dict__["loss_scale"] = 65536
         ys[0].backward()
-        self.assertEqual(x.grad_var.__dict__['loss_scale'], 2)
+        self.assertEqual(x.grad_var.__dict__["loss_scale"], 2)
 
-        golden = (gs[0] * np.float16(2 / 65536) + sum(gs[1:])).astype(
-            np.float16)
+        golden = (gs[0] * np.float16(2 / 65536) + sum(gs[1:])).astype(np.float16)
         # lossen the error threshold
         self.assertTrue(np.allclose(x.grad, golden, atol=1e-3))
 

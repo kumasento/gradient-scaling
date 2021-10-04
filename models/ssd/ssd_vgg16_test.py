@@ -23,8 +23,7 @@ class VGG16Test(unittest.TestCase):
         vgg16b = ssd_vgg16.VGG16()
         vgg16b.to_gpu()
 
-        x = chainer.Variable(
-            cp.random.normal(size=(1, 3, 224, 224)).astype('float32'))
+        x = chainer.Variable(cp.random.normal(size=(1, 3, 224, 224)).astype("float32"))
         vgg16a(x)  # initialization
         vgg16b(x)
         vgg16a.copyparams(vgg16b)
@@ -47,8 +46,7 @@ class VGG16ExtractorTest(unittest.TestCase):
         vgg16b = ssd_vgg16.VGG16Extractor300()
         vgg16b.to_gpu()
 
-        x = chainer.Variable(
-            cp.random.normal(size=(1, 3, 800, 800)).astype('float32'))
+        x = chainer.Variable(cp.random.normal(size=(1, 3, 800, 800)).astype("float32"))
         vgg16a(x)  # initialization
         vgg16b(x)
         vgg16a.copyparams(vgg16b)
@@ -68,8 +66,7 @@ class VGG16ExtractorTest(unittest.TestCase):
         vgg16b = ssd_vgg16.VGG16Extractor512()
         vgg16b.to_gpu()
 
-        x = chainer.Variable(
-            cp.random.normal(size=(1, 3, 800, 800)).astype('float32'))
+        x = chainer.Variable(cp.random.normal(size=(1, 3, 800, 800)).astype("float32"))
         vgg16a(x)  # initialization
         vgg16b(x)
         vgg16a.copyparams(vgg16b)

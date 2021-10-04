@@ -78,16 +78,10 @@ class SSD(chainer.Chain):
 
     """
 
-    def __init__(self,
-                 extractor,
-                 multibox,
-                 steps,
-                 sizes,
-                 variance=(0.1, 0.2),
-                 mean=0):
+    def __init__(self, extractor, multibox, steps, sizes, variance=(0.1, 0.2), mean=0):
         super().__init__()
         self.mean = mean
-        self.use_preset('visualize')
+        self.use_preset("visualize")
         self.dtype = chainer.global_config.dtype
 
         with self.init_scope():
@@ -97,8 +91,9 @@ class SSD(chainer.Chain):
             self.norm_ = Normalize(512, initial=initializers.Constant(20))
             self.norm = lambda x: self.norm_(x)
         self.type_cast_ada_loss = None
-        self.coder = MultiboxCoder(extractor.grids, multibox.aspect_ratios,
-                                   steps, sizes, variance)
+        self.coder = MultiboxCoder(
+            extractor.grids, multibox.aspect_ratios, steps, sizes, variance
+        )
 
     @property
     def insize(self):
@@ -139,15 +134,15 @@ class SSD(chainer.Chain):
         #     ys[i] = F.cast(ys[i], 'float32')
         # TODO: refactorize this. Instead of hardcoding, use AdaLossScaled
 
-
         if self.dtype != np.float32:
             if not isinstance(self.extractor.conv1_1, AdaLossConvolution2D):
-                y = F.cast(ys[0], 'float32')
+                y = F.cast(ys[0], "float32")
             else:
                 if self.type_cast_ada_loss is None:
-                    self.type_cast_ada_loss = AdaLossChainer(**self.extractor.conv1_1.ada_loss_cfg)
-                y = ada_loss_cast(ys[0], 'float32', self.type_cast_ada_loss)
-
+                    self.type_cast_ada_loss = AdaLossChainer(
+                        **self.extractor.conv1_1.ada_loss_cfg
+                    )
+                y = ada_loss_cast(ys[0], "float32", self.type_cast_ada_loss)
 
         ys[0] = self.norm(y)
         ys = tuple(ys)
@@ -182,14 +177,14 @@ class SSD(chainer.Chain):
                 preset to use.
         """
 
-        if preset == 'visualize':
+        if preset == "visualize":
             self.nms_thresh = 0.45
             self.score_thresh = 0.6
-        elif preset == 'evaluate':
+        elif preset == "evaluate":
             self.nms_thresh = 0.45
             self.score_thresh = 0.01
         else:
-            raise ValueError('preset must be visualize or evaluate')
+            raise ValueError("preset must be visualize or evaluate")
 
     def predict(self, imgs):
         """Detect objects from images.
@@ -228,8 +223,7 @@ class SSD(chainer.Chain):
             x.append(self.xp.array(img))
             sizes.append((H, W))
 
-        with chainer.using_config('train', False), \
-                chainer.function.no_backprop_mode():
+        with chainer.using_config("train", False), chainer.function.no_backprop_mode():
             x = chainer.Variable(self.xp.stack(x))
             mb_locs, mb_confs = self.forward(x)
         mb_locs, mb_confs = mb_locs.array, mb_confs.array
@@ -238,11 +232,10 @@ class SSD(chainer.Chain):
         labels = []
         scores = []
         for mb_loc, mb_conf, size in zip(mb_locs, mb_confs, sizes):
-            bbox, label, score = self.coder.decode(mb_loc, mb_conf,
-                                                   self.nms_thresh,
-                                                   self.score_thresh)
-            bbox = transforms.resize_bbox(bbox, (self.insize, self.insize),
-                                          size)
+            bbox, label, score = self.coder.decode(
+                mb_loc, mb_conf, self.nms_thresh, self.score_thresh
+            )
+            bbox = transforms.resize_bbox(bbox, (self.insize, self.insize), size)
             bboxes.append(chainer.backends.cuda.to_cpu(bbox))
             labels.append(chainer.backends.cuda.to_cpu(label))
             scores.append(chainer.backends.cuda.to_cpu(score))

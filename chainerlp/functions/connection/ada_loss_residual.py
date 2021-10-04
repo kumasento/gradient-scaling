@@ -12,7 +12,7 @@ class AdaLossResidual(chainer.function.function_node.FunctionNode):
 
     def forward(self, inputs):
         """ """
-        x, = inputs
+        (x,) = inputs
         return x, x
 
     def backward(self, input_indexes, grad_outputs):

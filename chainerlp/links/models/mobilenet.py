@@ -22,27 +22,44 @@ class DepthwiseSeparableConv2D(PickableSequentialChain):
 
         with self.init_scope():
             self.conv1 = L.DepthwiseConvolution2D(
-                in_channels, 1, ksize, stride=stride, pad=1, nobias=True, initialW=initialW)
+                in_channels,
+                1,
+                ksize,
+                stride=stride,
+                pad=1,
+                nobias=True,
+                initialW=initialW,
+            )
             self.bn1 = L.BatchNormalization(in_channels)
             self.relu1 = lambda x: F.relu(x)
             self.conv2 = L.Convolution2D(
-                in_channels, out_channels, ksize=1, stride=1, pad=0, nobias=True, initialW=initialW)
+                in_channels,
+                out_channels,
+                ksize=1,
+                stride=1,
+                pad=0,
+                nobias=True,
+                initialW=initialW,
+            )
             self.bn2 = L.BatchNormalization(out_channels)
             self.relu2 = lambda x: F.relu(x)
 
 
 class MobileNetV1Block(PickableSequentialChain):
-
-    def __init__(self, n_layer, in_channels, out_channels, ksize=3, stride=1, initialW=None):
+    def __init__(
+        self, n_layer, in_channels, out_channels, ksize=3, stride=1, initialW=None
+    ):
         """ CTOR. """
         super(MobileNetV1Block, self).__init__()
         with self.init_scope():
             self.a = DepthwiseSeparableConv2D(
-                in_channels, out_channels, ksize=ksize, stride=stride, initialW=initialW)
+                in_channels, out_channels, ksize=ksize, stride=stride, initialW=initialW
+            )
             for i in range(n_layer - 1):
-                name = 'b{}'.format(i)
+                name = "b{}".format(i)
                 block = DepthwiseSeparableConv2D(
-                    out_channels, out_channels, ksize=ksize, stride=1, initialW=initialW)
+                    out_channels, out_channels, ksize=ksize, stride=1, initialW=initialW
+                )
                 setattr(self, name, block)
 
 
@@ -55,13 +72,14 @@ class MobileNetV1(PickableSequentialChain):
         super(MobileNetV1, self).__init__()
 
         if initialW is None:
-            initialW = initializers.HeNormal(scale=1., fan_option='fan_out')
-        kwargs = {'initialW': initialW}
+            initialW = initializers.HeNormal(scale=1.0, fan_option="fan_out")
+        kwargs = {"initialW": initialW}
 
         with self.init_scope():
             # first layer
             self.conv1 = L.Convolution2D(
-                3, 32, ksize=3, stride=1, pad=1, nobias=True, **kwargs)
+                3, 32, ksize=3, stride=1, pad=1, nobias=True, **kwargs
+            )
             self.bn1 = L.BatchNormalization(32)
 
             # the rest of the laters

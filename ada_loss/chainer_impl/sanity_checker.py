@@ -3,6 +3,7 @@
 import chainer
 import pandas as pd
 
+
 class SanityChecker(object):
     """ Sanity checker """
 
@@ -19,24 +20,32 @@ class SanityChecker(object):
             self.curr_iter = curr_iter
             self.counter = 0
 
-        if (xp.isnan(g1.array).any() or
-            xp.isnan(g2.array).any() or
-            xp.isnan(gy.array).any() or
-            xp.isnan(W.array).any()):
+        if (
+            xp.isnan(g1.array).any()
+            or xp.isnan(g2.array).any()
+            or xp.isnan(gy.array).any()
+            or xp.isnan(W.array).any()
+        ):
             return
         nnz1 = xp.count_nonzero(g1.array)
-        nnz2 = xp.count_nonzero(g2.array) # fp16
-        nnz3 = xp.count_nonzero(g3.array) # fp32
+        nnz2 = xp.count_nonzero(g2.array)  # fp16
+        nnz3 = xp.count_nonzero(g3.array)  # fp32
 
         nuf1 = nnz1 - nnz3
         nuf2 = nnz2 - nnz3
 
-        self.history.append([
-            self.curr_iter, self.counter, loss_scale.item(),
-            nnz1.item(), nnz2.item(), nnz3.item(), 
-            (nuf1 / g3.size * 100).item(),
-            (nuf2 / g3.size * 100).item(),
-        ])
+        self.history.append(
+            [
+                self.curr_iter,
+                self.counter,
+                loss_scale.item(),
+                nnz1.item(),
+                nnz2.item(),
+                nnz3.item(),
+                (nuf1 / g3.size * 100).item(),
+                (nuf2 / g3.size * 100).item(),
+            ]
+        )
         # print(self.history[-1])
         self.counter += 1
 
@@ -63,7 +72,16 @@ class SanityChecker(object):
         #     n_uf * 100))
 
     def export(self):
-        return pd.DataFrame(self.history, columns=[
-            'iter', 'id', 'loss_scale', 'nnz_ls', 'nnz_fp16', 'nnz_fp32',
-            'nuf_ls', 'nuf_fp16'])
-        
+        return pd.DataFrame(
+            self.history,
+            columns=[
+                "iter",
+                "id",
+                "loss_scale",
+                "nnz_ls",
+                "nnz_fp16",
+                "nnz_fp32",
+                "nuf_ls",
+                "nuf_fp16",
+            ],
+        )

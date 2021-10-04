@@ -28,7 +28,7 @@ class PixelwiseSoftmaxClassifier(chainer.Chain):
 
     """
 
-    def __init__(self, predictor, ignore_label=-1, class_weight=None, dtype='float32'):
+    def __init__(self, predictor, ignore_label=-1, class_weight=None, dtype="float32"):
         super(PixelwiseSoftmaxClassifier, self).__init__()
         with self.init_scope():
             self.predictor = predictor
@@ -64,8 +64,8 @@ class PixelwiseSoftmaxClassifier(chainer.Chain):
         # y_ = self.predictor(x)
         self.y = self.predictor(x)
         self.loss = F.softmax_cross_entropy(
-            self.y, t, class_weight=self.class_weight,
-            ignore_label=self.ignore_label)
+            self.y, t, class_weight=self.class_weight, ignore_label=self.ignore_label
+        )
 
-        reporter.report({'loss': self.loss}, self)
+        reporter.report({"loss": self.loss}, self)
         return self.loss

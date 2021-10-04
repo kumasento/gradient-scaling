@@ -11,7 +11,7 @@ def _elementwise_softmax_cross_entropy(x, t):
     shape = t.shape
     x = F.reshape(x, (-1, x.shape[-1]))
     t = F.flatten(t)
-    return F.reshape(F.softmax_cross_entropy(x, t, reduce='no'), shape)
+    return F.reshape(F.softmax_cross_entropy(x, t, reduce="no"), shape)
 
 
 def _hard_negative(x, positive, k):
@@ -89,15 +89,14 @@ def multibox_loss(mb_locs, mb_confs, gt_mb_locs, gt_mb_labels, k, comm=None):
             z = chainer.Variable(xp.zeros((), dtype=np.float32))
             return z, z
 
-        loc_loss = F.huber_loss(mb_locs, gt_mb_locs, 1, reduce='no')
+        loc_loss = F.huber_loss(mb_locs, gt_mb_locs, 1, reduce="no")
         loc_loss = F.sum(loc_loss, axis=-1)
         loc_loss *= positive.astype(loc_loss.dtype)
         loc_loss = F.sum(loc_loss) / n_positive
 
         conf_loss = _elementwise_softmax_cross_entropy(mb_confs, gt_mb_labels)
         hard_negative = _hard_negative(conf_loss.array, positive, k)
-        conf_loss *= xp.logical_or(positive,
-                                   hard_negative).astype(conf_loss.dtype)
+        conf_loss *= xp.logical_or(positive, hard_negative).astype(conf_loss.dtype)
         conf_loss = F.sum(conf_loss) / n_positive
 
     return loc_loss, conf_loss

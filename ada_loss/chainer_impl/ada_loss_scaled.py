@@ -34,7 +34,7 @@ def ada_loss_forward_for_pickable(self, x, verbose=False):
 
     layers = {}
     h = x
-    for i, name in enumerate(self.layer_names[:last_index + 1]):
+    for i, name in enumerate(self.layer_names[: last_index + 1]):
         h = self[name](h)
         if name in pick:
             if i != last_index:
@@ -55,18 +55,20 @@ def ada_loss_forward_for_pickable(self, x, verbose=False):
 class AdaLossScaled(chainer.Chain):
     """ Given an input link, wrap it to support adaptive loss scaling. """
 
-    def __init__(self,
-                 link,
-                 init_scale=1.0,
-                 cfg=None,
-                 transforms=default_transforms,
-                 transform_functions=True,
-                 seed=None,
-                 verbose=False):
+    def __init__(
+        self,
+        link,
+        init_scale=1.0,
+        cfg=None,
+        transforms=default_transforms,
+        transform_functions=True,
+        seed=None,
+        verbose=False,
+    ):
         """ CTOR. """
         super().__init__()
 
-        assert isinstance(link, chainer.Link), 'link should be a chainer.Link'
+        assert isinstance(link, chainer.Link), "link should be a chainer.Link"
 
         self.verbose = verbose
         self.transform_functions = transform_functions
@@ -107,12 +109,12 @@ class AdaLossScaled(chainer.Chain):
 
                 if isinstance(value, chainer.Link):
                     # recursively setup all links
-                    new_dict[attr] = self.setup_link(value,
-                                                     cfg=cfg,
-                                                     transforms=transforms)
+                    new_dict[attr] = self.setup_link(
+                        value, cfg=cfg, transforms=transforms
+                    )
                 else:  # stop here
                     if self.verbose:
-                        print('==> Wrapping function {} ...'.format(attr))
+                        print("==> Wrapping function {} ...".format(attr))
                     if self.transform_functions:
                         new_dict[attr] = self.wrap_func(value)
 
@@ -129,7 +131,9 @@ class AdaLossScaled(chainer.Chain):
                 if self.verbose:
                     print(
                         '==> Replacing attribute "{}" from {} to {} ...'.format(
-                            attr, getattr(link, attr), value))
+                            attr, getattr(link, attr), value
+                        )
+                    )
                 delattr(link, attr)
                 setattr(link, attr, value)
 
@@ -147,8 +151,11 @@ class AdaLossScaled(chainer.Chain):
             if not isinstance(link, trans.cls):
                 continue
             if self.verbose:
-                print('==> Transforming link of type {} with cfg {} ...'.format(
-                    type(link), cfg))
+                print(
+                    "==> Transforming link of type {} with cfg {} ...".format(
+                        type(link), cfg
+                    )
+                )
             return trans(link, cfg=cfg)
 
         # go deeper into the link
@@ -178,7 +185,7 @@ class AdaLossScaled(chainer.Chain):
         if link.pick is None:  # No need to update
             return link
         if self.verbose:
-            print('==> Updating the forward method of link {} ...'.format(link))
+            print("==> Updating the forward method of link {} ...".format(link))
 
         link.forward = MethodType(ada_loss_forward_for_pickable, link)
         return link

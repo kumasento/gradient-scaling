@@ -7,4 +7,4 @@ class LoadOnlyUpdator(chainer.training.StandardUpdater):
 
     def serialize(self, serializer):
         for name, optimizer in six.iteritems(self._optimizers):
-            optimizer.target.serialize(serializer['model:' + name])
+            optimizer.target.serialize(serializer["model:" + name])

@@ -16,19 +16,21 @@ class FixupConv2D(chainer.Chain):
         bias scalar term. The final result might be passed through an activation func.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 ksize=None,
-                 stride=1,
-                 pad=0,
-                 dilate=1,
-                 groups=1,
-                 nobias=True,
-                 initialW=None,
-                 initial_bias=None,
-                 use_scale=True,
-                 activ=F.relu):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        ksize=None,
+        stride=1,
+        pad=0,
+        dilate=1,
+        groups=1,
+        nobias=True,
+        initialW=None,
+        initial_bias=None,
+        use_scale=True,
+        activ=F.relu,
+    ):
         """ CTOR. """
         super(FixupConv2D, self).__init__()
 
@@ -36,16 +38,18 @@ class FixupConv2D(chainer.Chain):
             initialW = I.Zero()
 
         with self.init_scope():
-            self.conv = L.Convolution2D(in_channels,
-                                        out_channels,
-                                        ksize=ksize,
-                                        stride=stride,
-                                        pad=pad,
-                                        nobias=nobias,
-                                        initialW=initialW,
-                                        initial_bias=initial_bias,
-                                        dilate=dilate,
-                                        groups=groups)
+            self.conv = L.Convolution2D(
+                in_channels,
+                out_channels,
+                ksize=ksize,
+                stride=stride,
+                pad=pad,
+                nobias=nobias,
+                initialW=initialW,
+                initial_bias=initial_bias,
+                dilate=dilate,
+                groups=groups,
+            )
             # bias term for conv input and output
             self.bias_in = chainer.Parameter(initializer=I.Zero(), shape=1)
             self.bias_out = chainer.Parameter(initializer=I.Zero(), shape=1)

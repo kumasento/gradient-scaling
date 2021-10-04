@@ -14,6 +14,7 @@ except ImportError:
 from chainercv.links import PickableSequentialChain
 
 from chainerlp.links import Conv2DBNActiv
+
 # from chainerlp.links import AdaLossLinear, AdaLossConvolution2D
 
 
@@ -29,73 +30,82 @@ class Block(chainer.Chain):
 
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 ksize,
-                 pad=1,
-                 use_batchnorm=False,
-                 initialW=None,
-                 bn_kwargs={},
-                 conv2d=None,
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        ksize,
+        pad=1,
+        use_batchnorm=False,
+        initialW=None,
+        bn_kwargs={},
+        conv2d=None,
+        **kwargs
+    ):
         super(Block, self).__init__()
         with self.init_scope():
             if conv2d is None:
                 conv2d = L.Convolution2D
 
-            self.conv = conv2d(in_channels,
-                               out_channels,
-                               ksize,
-                               pad=pad,
-                               initialW=initialW,
-                               nobias=False,
-                               **kwargs)
+            self.conv = conv2d(
+                in_channels,
+                out_channels,
+                ksize,
+                pad=pad,
+                initialW=initialW,
+                nobias=False,
+                **kwargs
+            )
             if use_batchnorm:
                 # TODO: allow passing customized BN
-                if 'comm' in bn_kwargs:
-                    self.bn = MultiNodeBatchNormalization(
-                        out_channels, **bn_kwargs)
+                if "comm" in bn_kwargs:
+                    self.bn = MultiNodeBatchNormalization(out_channels, **bn_kwargs)
                 else:
                     self.bn = L.BatchNormalization(out_channels, **bn_kwargs)
             self.relu = lambda x: F.relu(x)
 
     def forward(self, x):
         h = self.conv(x)
-        if hasattr(self, 'bn'):
+        if hasattr(self, "bn"):
             h = self.bn(h)
         return self.relu(h)
 
 
 class VGGBlock(PickableSequentialChain):
-    def __init__(self,
-                 n_layer,
-                 in_channels,
-                 out_channels,
-                 use_batchnorm=False,
-                 initialW=None,
-                 bn_kwargs={},
-                 **kwargs):
+    def __init__(
+        self,
+        n_layer,
+        in_channels,
+        out_channels,
+        use_batchnorm=False,
+        initialW=None,
+        bn_kwargs={},
+        **kwargs
+    ):
         super(VGGBlock, self).__init__()
 
         _KSIZE = 3
         with self.init_scope():
-            self.a = Block(in_channels,
-                           out_channels,
-                           _KSIZE,
-                           use_batchnorm=use_batchnorm,
-                           initialW=initialW,
-                           bn_kwargs=bn_kwargs,
-                           **kwargs)
+            self.a = Block(
+                in_channels,
+                out_channels,
+                _KSIZE,
+                use_batchnorm=use_batchnorm,
+                initialW=initialW,
+                bn_kwargs=bn_kwargs,
+                **kwargs
+            )
             for i in range(n_layer - 1):
-                name = 'b{}'.format(i + 1)
-                block = Block(out_channels,
-                              out_channels,
-                              _KSIZE,
-                              use_batchnorm=use_batchnorm,
-                              initialW=initialW,
-                              bn_kwargs=bn_kwargs,
-                              **kwargs)
+                name = "b{}".format(i + 1)
+                block = Block(
+                    out_channels,
+                    out_channels,
+                    _KSIZE,
+                    use_batchnorm=use_batchnorm,
+                    initialW=initialW,
+                    bn_kwargs=bn_kwargs,
+                    **kwargs
+                )
                 setattr(self, name, block)
 
             self.pool = lambda x: F.max_pooling_2d(x, (2, 2), stride=2)
@@ -115,20 +125,22 @@ class VGGNetCIFAR(PickableSequentialChain):
         19: [2, 2, 4, 4, 4],
     }
 
-    def __init__(self,
-                 n_layer,
-                 n_class=None,
-                 use_batchnorm=False,
-                 initialW=None,
-                 fc_kwargs={},
-                 **kwargs):
+    def __init__(
+        self,
+        n_layer,
+        n_class=None,
+        use_batchnorm=False,
+        initialW=None,
+        fc_kwargs={},
+        **kwargs
+    ):
         super(VGGNetCIFAR, self).__init__()
 
         if initialW is None:
-            initialW = initializers.HeNormal(scale=1., fan_option='fan_out')
-        if 'initialW' not in fc_kwargs:
-            fc_kwargs['initialW'] = initialW  # initializers.Normal(scale=0.01)
-        kwargs.update({'initialW': initialW, 'use_batchnorm': use_batchnorm})
+            initialW = initializers.HeNormal(scale=1.0, fan_option="fan_out")
+        if "initialW" not in fc_kwargs:
+            fc_kwargs["initialW"] = initialW  # initializers.Normal(scale=0.01)
+        kwargs.update({"initialW": initialW, "use_batchnorm": use_batchnorm})
 
         blocks = self._blocks[n_layer]
         with self.init_scope():
@@ -281,31 +293,27 @@ class vgg19(VGGNetCIFAR):
 
 class vgg11_bn(VGGNetCIFAR):
     def __init__(self, n_class=None, **kwargs):
-        super(vgg11_bn, self).__init__(11,
-                                       n_class=n_class,
-                                       use_batchnorm=True,
-                                       **kwargs)
+        super(vgg11_bn, self).__init__(
+            11, n_class=n_class, use_batchnorm=True, **kwargs
+        )
 
 
 class vgg13_bn(VGGNetCIFAR):
     def __init__(self, n_class=None, **kwargs):
-        super(vgg13_bn, self).__init__(13,
-                                       n_class=n_class,
-                                       use_batchnorm=True,
-                                       **kwargs)
+        super(vgg13_bn, self).__init__(
+            13, n_class=n_class, use_batchnorm=True, **kwargs
+        )
 
 
 class vgg16_bn(VGGNetCIFAR):
     def __init__(self, n_class=None, **kwargs):
-        super(vgg16_bn, self).__init__(16,
-                                       n_class=n_class,
-                                       use_batchnorm=True,
-                                       **kwargs)
+        super(vgg16_bn, self).__init__(
+            16, n_class=n_class, use_batchnorm=True, **kwargs
+        )
 
 
 class vgg19_bn(VGGNetCIFAR):
     def __init__(self, n_class=None, **kwargs):
-        super(vgg19_bn, self).__init__(19,
-                                       n_class=n_class,
-                                       use_batchnorm=True,
-                                       **kwargs)
+        super(vgg19_bn, self).__init__(
+            19, n_class=n_class, use_batchnorm=True, **kwargs
+        )

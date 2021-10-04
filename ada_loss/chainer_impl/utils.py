@@ -7,9 +7,9 @@ import cupy as cp
 import chainer
 
 
-def scale_grad(grad, scale, dtype=None, key='loss_scale'):
+def scale_grad(grad, scale, dtype=None, key="loss_scale"):
     """ Scale the gradient value by scale and attach 'loss_scale' """
-    assert isinstance(grad, chainer.Variable), 'grad should be a variable'
+    assert isinstance(grad, chainer.Variable), "grad should be a variable"
 
     # compute the scaled gradient
     xp = chainer.backend.get_array_module(grad.array)
@@ -32,8 +32,10 @@ def set_random_seed(seed, device=None):
         https://github.com/chainer/chainer/issues/4550
     """
     print(
-        '==> Set manual random seed to {} in process PID={} PPID={} on device={}'
-        .format(seed, os.getpid(), os.getppid(), device))
+        "==> Set manual random seed to {} in process PID={} PPID={} on device={}".format(
+            seed, os.getpid(), os.getppid(), device
+        )
+    )
 
     # set Python random seed
     random.seed(seed)

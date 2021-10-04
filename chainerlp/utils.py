@@ -15,8 +15,10 @@ def set_random_seed(seed, device=None):
         https://github.com/chainer/chainer/issues/4550
     """
     print(
-        '==> Set manual random seed to {} in process PID={} PPID={} on device={}'
-        .format(seed, os.getpid(), os.getppid(), device))
+        "==> Set manual random seed to {} in process PID={} PPID={} on device={}".format(
+            seed, os.getpid(), os.getppid(), device
+        )
+    )
 
     # set Python random seed
     random.seed(seed)

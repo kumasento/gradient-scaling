@@ -6,8 +6,9 @@ import os
 import numpy as np
 import pandas as pd
 
+
 def plot_loss_scale_dist(train_dir, ax):
-  """ Plot the distribution of loss scales across all layers.
+    """ Plot the distribution of loss scales across all layers.
   
   The log file is in CSV format. Example rows:
 
@@ -33,29 +34,33 @@ def plot_loss_scale_dist(train_dir, ax):
     train_dir(str): path to where log files are stored.
       There should exist a file called "loss_scale.csv"
   """
-  log_path = os.path.join(train_dir, 'loss_scale.csv')
-  if not os.path.isfile(log_path):
-    raise FileNotFoundError("'loss_scale.csv' does not exist in train_dir: {}".format(train_dir))
+    log_path = os.path.join(train_dir, "loss_scale.csv")
+    if not os.path.isfile(log_path):
+        raise FileNotFoundError(
+            "'loss_scale.csv' does not exist in train_dir: {}".format(train_dir)
+        )
 
-  # load data
-  df = pd.read_csv(log_path, index_col=0)
-  
-  # extract iteration IDs
-  iters = np.unique(df['iter'].values)
-  keys = np.unique(df['key'].values)
+    # load data
+    df = pd.read_csv(log_path, index_col=0)
 
-  # calculate how many layers logged in one iteration.
-  N = len(df[(df['iter'] == iters[0])].index) // len(keys)
+    # extract iteration IDs
+    iters = np.unique(df["iter"].values)
+    keys = np.unique(df["key"].values)
 
-  # all loss scales
-  # we only take care of the case when key equals to 'final'
-  arr = df[(df['key'] == 'final') & (df['label'] == 'AdaLossConvolution2DFunction')]['val'].values
-  arr = arr.reshape([len(iters), N])
-  arr = arr[:, ::-1] # reverse layer ID
+    # calculate how many layers logged in one iteration.
+    N = len(df[(df["iter"] == iters[0])].index) // len(keys)
 
-  # calculate mean of loss scales for each layer
-  mean = np.mean(arr, axis=0) # mean accross iterations 
-  std = np.std(arr, axis=0)
+    # all loss scales
+    # we only take care of the case when key equals to 'final'
+    arr = df[(df["key"] == "final") & (df["label"] == "AdaLossConvolution2DFunction")][
+        "val"
+    ].values
+    arr = arr.reshape([len(iters), N])
+    arr = arr[:, ::-1]  # reverse layer ID
 
-  # plot to ax
-  ax.bar(np.arange(len(mean)), mean, yerr=std)
+    # calculate mean of loss scales for each layer
+    mean = np.mean(arr, axis=0)  # mean accross iterations
+    std = np.std(arr, axis=0)
+
+    # plot to ax
+    ax.bar(np.arange(len(mean)), mean, yerr=std)

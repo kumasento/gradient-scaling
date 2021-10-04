@@ -105,8 +105,8 @@ class VGG16Extractor300(VGG16):
         super().__init__()
 
         init = {
-            'initialW': initializers.LeCunUniform(),
-            'initial_bias': initializers.Zero(),
+            "initialW": initializers.LeCunUniform(),
+            "initial_bias": initializers.Zero(),
         }
 
         with self.init_scope():
@@ -131,12 +131,12 @@ class VGG16Extractor300(VGG16):
             self.relu11_2 = lambda x: F.relu(x)
 
         self.pick = (
-            'relu4_3',
-            'relu7',
-            'relu8_2',
-            'relu9_2',
-            'relu10_2',
-            'relu11_2',
+            "relu4_3",
+            "relu7",
+            "relu8_2",
+            "relu9_2",
+            "relu10_2",
+            "relu11_2",
         )
 
 
@@ -154,8 +154,8 @@ class VGG16Extractor512(VGG16):
         super().__init__()
 
         init = {
-            'initialW': initializers.LeCunUniform(),
-            'initial_bias': initializers.Zero(),
+            "initialW": initializers.LeCunUniform(),
+            "initial_bias": initializers.Zero(),
         }
 
         with self.init_scope():
@@ -185,13 +185,13 @@ class VGG16Extractor512(VGG16):
             self.relu12_2 = lambda x: F.relu(x)
 
         self.pick = (
-            'relu4_3',
-            'relu7',
-            'relu8_2',
-            'relu9_2',
-            'relu10_2',
-            'relu11_2',
-            'relu12_2',
+            "relu4_3",
+            "relu7",
+            "relu8_2",
+            "relu9_2",
+            "relu10_2",
+            "relu11_2",
+            "relu12_2",
         )
 
 
@@ -232,33 +232,34 @@ class SSD300(SSD):
     """
 
     _models = {
-        'voc0712': {
-            'param': {
-                'n_fg_class': 20
-            },
-            'url': 'https://chainercv-models.preferred.jp/'
-            'ssd300_voc0712_converted_2017_06_06.npz',
-            'cv2': True
+        "voc0712": {
+            "param": {"n_fg_class": 20},
+            "url": "https://chainercv-models.preferred.jp/"
+            "ssd300_voc0712_converted_2017_06_06.npz",
+            "cv2": True,
         },
-        'imagenet': {
-            'url': 'https://chainercv-models.preferred.jp/'
-            'ssd_vgg16_imagenet_converted_2017_06_09.npz',
-            'cv2': True
+        "imagenet": {
+            "url": "https://chainercv-models.preferred.jp/"
+            "ssd_vgg16_imagenet_converted_2017_06_09.npz",
+            "cv2": True,
         },
     }
 
     def __init__(self, n_fg_class=None, pretrained_model=None):
         param, path = utils.prepare_pretrained_model(
-            {'n_fg_class': n_fg_class}, pretrained_model, self._models)
+            {"n_fg_class": n_fg_class}, pretrained_model, self._models
+        )
 
-        super().__init__(extractor=VGG16Extractor300(),
-                         multibox=Multibox(n_class=param['n_fg_class'] + 1,
-                                           aspect_ratios=((2, ), (2, 3),
-                                                          (2, 3), (2, 3),
-                                                          (2, ), (2, ))),
-                         steps=(8, 16, 32, 64, 100, 300),
-                         sizes=(30, 60, 111, 162, 213, 264, 315),
-                         mean=_imagenet_mean)
+        super().__init__(
+            extractor=VGG16Extractor300(),
+            multibox=Multibox(
+                n_class=param["n_fg_class"] + 1,
+                aspect_ratios=((2,), (2, 3), (2, 3), (2, 3), (2,), (2,)),
+            ),
+            steps=(8, 16, 32, 64, 100, 300),
+            sizes=(30, 60, 111, 162, 213, 264, 315),
+            mean=_imagenet_mean,
+        )
 
         if path:
             chainer.serializers.load_npz(path, self, strict=False)
@@ -301,33 +302,34 @@ class SSD512(SSD):
     """
 
     _models = {
-        'voc0712': {
-            'param': {
-                'n_fg_class': 20
-            },
-            'url': 'https://chainercv-models.preferred.jp/'
-            'ssd512_voc0712_converted_2017_06_06.npz',
-            'cv2': True
+        "voc0712": {
+            "param": {"n_fg_class": 20},
+            "url": "https://chainercv-models.preferred.jp/"
+            "ssd512_voc0712_converted_2017_06_06.npz",
+            "cv2": True,
         },
-        'imagenet': {
-            'url': 'https://chainercv-models.preferred.jp/'
-            'ssd_vgg16_imagenet_converted_2017_06_09.npz',
-            'cv2': True
+        "imagenet": {
+            "url": "https://chainercv-models.preferred.jp/"
+            "ssd_vgg16_imagenet_converted_2017_06_09.npz",
+            "cv2": True,
         },
     }
 
     def __init__(self, n_fg_class=None, pretrained_model=None):
         param, path = utils.prepare_pretrained_model(
-            {'n_fg_class': n_fg_class}, pretrained_model, self._models)
+            {"n_fg_class": n_fg_class}, pretrained_model, self._models
+        )
 
         super().__init__(
             extractor=VGG16Extractor512(),
-            multibox=Multibox(n_class=param['n_fg_class'] + 1,
-                              aspect_ratios=((2, ), (2, 3), (2, 3), (2, 3),
-                                             (2, 3), (2, ), (2, ))),
+            multibox=Multibox(
+                n_class=param["n_fg_class"] + 1,
+                aspect_ratios=((2,), (2, 3), (2, 3), (2, 3), (2, 3), (2,), (2,)),
+            ),
             steps=(8, 16, 32, 64, 128, 256, 512),
             sizes=(35.84, 76.8, 153.6, 230.4, 307.2, 384.0, 460.8, 537.6),
-            mean=_imagenet_mean)
+            mean=_imagenet_mean,
+        )
 
         if path:
             chainer.serializers.load_npz(path, self, strict=False)

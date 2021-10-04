@@ -3,6 +3,7 @@
 
 class AdaLossTransform(object):
     """ The base class """
+
     cls = None
 
     def __call__(self, link, cfg):
@@ -14,7 +15,7 @@ class AdaLossTransform(object):
 
     def create(self, link, cfg):
         """ Create the new link """
-        raise NotImplementedError('create() should be implemented')
+        raise NotImplementedError("create() should be implemented")
 
     def copyparams(self, src, dst):
         """ Copy parameter from the old link to the new link """

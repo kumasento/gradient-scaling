@@ -31,19 +31,10 @@ class AdaLossRecorder(object):
     def record(self, key, val, label=None):
         """ Store the loss scale value """
         if self.is_recording():
-            self.data.append([
-                self.current_iteration,
-                label,
-                key,
-                val,
-            ])
+            self.data.append(
+                [self.current_iteration, label, key, val,]
+            )
 
     def export(self):
         """ Export to format that can be further processed """
-        return pd.DataFrame(self.data,
-                            columns=[
-                                'iter',
-                                'label',
-                                'key',
-                                'val',
-                            ])
+        return pd.DataFrame(self.data, columns=["iter", "label", "key", "val",])

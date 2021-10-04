@@ -30,5 +30,6 @@ class NumericalDebugger(extension.Extension):
 
             if is_diverged:
                 raise RuntimeError(
-                    'Kill the process since parameters in optimizer'
-                    ' \'{}\' diverge at step {}. R.I.P.'.format(name, optimizer.t))
+                    "Kill the process since parameters in optimizer"
+                    " '{}' diverge at step {}. R.I.P.".format(name, optimizer.t)
+                )

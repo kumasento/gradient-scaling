@@ -37,7 +37,7 @@ def make_shift(attr, optimizer=None):
 
     def deco(func):
         def ext(trainer):
-            opt = optimizer or trainer.updater.get_optimizer('main')
+            opt = optimizer or trainer.updater.get_optimizer("main")
             setattr(opt, attr, func(trainer))
 
         ext.default_name = func.__name__

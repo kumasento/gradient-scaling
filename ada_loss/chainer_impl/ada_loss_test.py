@@ -17,8 +17,8 @@ class AdaLossChainerTest(unittest.TestCase):
         """ Element-wise multiplication """
         ada_loss = AdaLossChainer()
 
-        g = chainer.Variable(np.random.normal(size=(2, 2)).astype('float32'))
-        W = chainer.Variable(np.random.normal(size=(2, 2)).astype('float32'))
+        g = chainer.Variable(np.random.normal(size=(2, 2)).astype("float32"))
+        W = chainer.Variable(np.random.normal(size=(2, 2)).astype("float32"))
         r = ada_loss.get_element_wise_multiply(g, W)
 
         # expected sequence
@@ -44,8 +44,8 @@ class AdaLossChainerTest(unittest.TestCase):
         u_max, u_min = 1e3, 1e-3
         ada_loss = AdaLossChainer(u_max=u_max, u_min=u_min)
 
-        g = chainer.Variable(np.random.normal(size=(32, 32)).astype('float32'))
-        W = chainer.Variable(np.random.normal(size=(32, 32)).astype('float32'))
+        g = chainer.Variable(np.random.normal(size=(32, 32)).astype("float32"))
+        W = chainer.Variable(np.random.normal(size=(32, 32)).astype("float32"))
         s = ada_loss.get_loss_scale_by_element_wise_range(g, W)
 
         # no overflow will happen
@@ -53,9 +53,11 @@ class AdaLossChainerTest(unittest.TestCase):
 
         # will overflow
         g = chainer.Variable(
-            np.random.normal(scale=16, size=(32, 32)).astype('float32'))
+            np.random.normal(scale=16, size=(32, 32)).astype("float32")
+        )
         W = chainer.Variable(
-            np.random.normal(scale=16, size=(32, 32)).astype('float32'))
+            np.random.normal(scale=16, size=(32, 32)).astype("float32")
+        )
         s = ada_loss.get_loss_scale_by_element_wise_range(g, W)
 
         self.assertLessEqual(s, 1.0)
@@ -65,61 +67,62 @@ class AdaLossChainerTest(unittest.TestCase):
     def test_get_prev_scale(self):
         """ Check how prev_scale is implemented.
             Should extract correctly the loss_scale from the previous layer. """
-        g = chainer.Variable(np.random.normal(size=1).astype('float32'))
-        g.__dict__['loss_scale'] = 2.0
+        g = chainer.Variable(np.random.normal(size=1).astype("float32"))
+        g.__dict__["loss_scale"] = 2.0
 
         ada_loss = AdaLossChainer()
         self.assertEqual(ada_loss.get_prev_scale(g), 2.0)
 
     def test_unscaled_gradient(self):
         """ Check whether the unscaled performs correctly. """
-        g_data = np.random.normal(size=16).astype('float32')
+        g_data = np.random.normal(size=16).astype("float32")
         g = chainer.Variable(g_data)
 
-        ada_loss = AdaLossChainer(dtype='float32', debug_level=1)
+        ada_loss = AdaLossChainer(dtype="float32", debug_level=1)
         ug = ada_loss.get_unscaled_gradient(g, 2.0)
         self.assertTrue(np.allclose(ug.array * 2.0, g_data))
 
         # float16
-        g_data = np.random.normal(size=16).astype('float16') * 100
+        g_data = np.random.normal(size=16).astype("float16") * 100
         g = chainer.Variable(g_data)
-        ada_loss = AdaLossChainer(dtype='float16', debug_level=1)
-        ug = ada_loss.get_unscaled_gradient(g, np.array(2.0, dtype='float32'))
+        ada_loss = AdaLossChainer(dtype="float16", debug_level=1)
+        ug = ada_loss.get_unscaled_gradient(g, np.array(2.0, dtype="float32"))
         self.assertTrue(np.allclose(ug.array * 2.0, g_data))
         # cause overflow
         loss_scale = 1e-6
         with self.assertRaises(ValueError):
-            ada_loss.get_unscaled_gradient(
-                g, np.array(loss_scale, dtype='float32'))
+            ada_loss.get_unscaled_gradient(g, np.array(loss_scale, dtype="float32"))
 
     def test_get_scaled_gradient(self):
         """ Test the scaling """
-        g = chainer.Variable(np.random.normal(size=1).astype('float32'))
+        g = chainer.Variable(np.random.normal(size=1).astype("float32"))
         scale = 2.0
 
         # NOTE: float32 is necessary
-        ada_loss = AdaLossChainer(dtype='float32')
+        ada_loss = AdaLossChainer(dtype="float32")
         s_grad = ada_loss.get_scaled_gradient(g, scale)
         self.assertTrue(np.allclose(g.array * 2, s_grad.array))
-        self.assertEqual(getattr(s_grad, 'loss_scale'), 2.0)
+        self.assertEqual(getattr(s_grad, "loss_scale"), 2.0)
 
     def test_power_of_two_in_get_loss_scale(self):
         """ Check the switch of power_of_two """
         # turn ON
         dtype = np.float16
-        ada_loss = AdaLossChainer(dtype=dtype,
-                                  loss_scale_method='element_wise_range',
-                                  use_bound=False)
+        ada_loss = AdaLossChainer(
+            dtype=dtype, loss_scale_method="element_wise_range", use_bound=False
+        )
         g = chainer.Variable(np.array([[1e-5]], dtype=dtype))
         W = chainer.Variable(np.array([[1e-4]], dtype=dtype))
         s = ada_loss.get_loss_scale(g, W)
         self.assertEqual(s, 32)
 
         # turn OFF
-        ada_loss = AdaLossChainer(dtype=dtype,
-                                  loss_scale_method='element_wise_range',
-                                  power_of_two=False,
-                                  use_bound=False)
+        ada_loss = AdaLossChainer(
+            dtype=dtype,
+            loss_scale_method="element_wise_range",
+            power_of_two=False,
+            use_bound=False,
+        )
         g = chainer.Variable(np.array([[1e-5]], dtype=dtype))
         W = chainer.Variable(np.array([[1e-4]], dtype=dtype))
         s = ada_loss.get_loss_scale(g, W)
@@ -174,10 +177,14 @@ class AdaLossChainerTest(unittest.TestCase):
         ada_loss = AdaLossChainer(dtype=dtype)
         mu, sigma = ada_loss.get_mean_and_std_of_product(X, Y)
 
-        X_mu, X_sigma = (X_data.astype(np.float32).mean(),
-                         X_data.astype(np.float32).std())
-        Y_mu, Y_sigma = (Y_data.astype(np.float32).mean(),
-                         Y_data.astype(np.float32).std())
+        X_mu, X_sigma = (
+            X_data.astype(np.float32).mean(),
+            X_data.astype(np.float32).std(),
+        )
+        Y_mu, Y_sigma = (
+            Y_data.astype(np.float32).mean(),
+            Y_data.astype(np.float32).std(),
+        )
 
         self.assertEqual(mu.dtype, np.float32)
         self.assertEqual(sigma.dtype, np.float32)
@@ -185,8 +192,13 @@ class AdaLossChainerTest(unittest.TestCase):
         self.assertTrue(np.allclose(X_mu * Y_mu, mu))
         self.assertTrue(
             np.allclose(
-                np.sqrt((X_sigma**2 + X_mu**2) * (Y_sigma**2 + Y_mu**2) -
-                        (X_mu * Y_mu)**2).astype(np.float32), sigma))
+                np.sqrt(
+                    (X_sigma ** 2 + X_mu ** 2) * (Y_sigma ** 2 + Y_mu ** 2)
+                    - (X_mu * Y_mu) ** 2
+                ).astype(np.float32),
+                sigma,
+            )
+        )
 
     def _test_get_loss_scale_by_approx_range(self, g_sigma, W_sigma, dtype):
         g_data = np.random.normal(scale=g_sigma, size=(32, 32)).astype(dtype)
@@ -243,24 +255,24 @@ class AdaLossChainerTest(unittest.TestCase):
             chainer.Variable(np.random.normal(size=16)),
             chainer.Variable(np.random.normal(size=16)),
         ]
-        gs[0].__dict__['loss_scale'] = 1
-        gs[1].__dict__['loss_scale'] = 2
+        gs[0].__dict__["loss_scale"] = 1
+        gs[1].__dict__["loss_scale"] = 2
 
         ada_loss = AdaLossChainer()
         gs = ada_loss.rescaling(gs)
 
         # scale to the larger one
-        self.assertEqual(gs[0].__dict__['loss_scale'], 2)
+        self.assertEqual(gs[0].__dict__["loss_scale"], 2)
 
         # case 2: now we have overflow problem
         gs = [
             chainer.Variable(np.random.normal(size=16)),
             chainer.Variable(np.random.normal(size=16)),
         ]
-        gs[0].__dict__['loss_scale'] = 65536
-        gs[1].__dict__['loss_scale'] = 2
+        gs[0].__dict__["loss_scale"] = 65536
+        gs[1].__dict__["loss_scale"] = 2
         gs = ada_loss.rescaling(gs)
-        self.assertEqual(gs[0].__dict__['loss_scale'], 2)
+        self.assertEqual(gs[0].__dict__["loss_scale"], 2)
 
 
 testing.run_module(__name__, __file__)

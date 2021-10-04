@@ -53,12 +53,16 @@ class AdaLossLinearTest(unittest.TestCase):
         b = chainer.Variable(b_data)
         # with loss scaling
         y2 = loss_scaling(
-            ada_loss_linear(x,
-                            W,
-                            b=b,
-                            ada_loss=AdaLossChainer(loss_scale_method='fixed',
-                                                    fixed_loss_scale=2.0)),
-            2.0)
+            ada_loss_linear(
+                x,
+                W,
+                b=b,
+                ada_loss=AdaLossChainer(
+                    loss_scale_method="fixed", fixed_loss_scale=2.0
+                ),
+            ),
+            2.0,
+        )
         y2.grad = g_data
         y2.backward()
 

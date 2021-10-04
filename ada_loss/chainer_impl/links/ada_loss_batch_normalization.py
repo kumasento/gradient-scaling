@@ -4,36 +4,43 @@ from chainer import configuration
 from chainer import functions
 from chainer.utils import argument
 
-from ada_loss.chainer_impl.functions.ada_loss_batch_normalization import ada_loss_batch_normalization, ada_loss_fixed_batch_normalization
+from ada_loss.chainer_impl.functions.ada_loss_batch_normalization import (
+    ada_loss_batch_normalization,
+    ada_loss_fixed_batch_normalization,
+)
 from ada_loss.chainer_impl.ada_loss import AdaLossChainer
 
 
 class AdaLossBatchNormalization(L.BatchNormalization):
-    def __init__(self,
-                 size=None,
-                 decay=0.9,
-                 eps=2e-5,
-                 dtype=None,
-                 use_gamma=True,
-                 use_beta=True,
-                 initial_gamma=None,
-                 initial_beta=None,
-                 axis=None,
-                 initial_avg_mean=None,
-                 initial_avg_var=None,
-                 ada_loss_cfg=None):
+    def __init__(
+        self,
+        size=None,
+        decay=0.9,
+        eps=2e-5,
+        dtype=None,
+        use_gamma=True,
+        use_beta=True,
+        initial_gamma=None,
+        initial_beta=None,
+        axis=None,
+        initial_avg_mean=None,
+        initial_avg_var=None,
+        ada_loss_cfg=None,
+    ):
         """ CTOR """
-        super().__init__(size=size,
-                         decay=decay,
-                         eps=eps,
-                         dtype=dtype,
-                         use_gamma=use_gamma,
-                         use_beta=use_beta,
-                         initial_gamma=initial_gamma,
-                         initial_beta=initial_beta,
-                         axis=axis,
-                         initial_avg_mean=initial_avg_mean,
-                         initial_avg_var=initial_avg_var)
+        super().__init__(
+            size=size,
+            decay=decay,
+            eps=eps,
+            dtype=dtype,
+            use_gamma=use_gamma,
+            use_beta=use_beta,
+            initial_gamma=initial_gamma,
+            initial_beta=initial_beta,
+            axis=axis,
+            initial_avg_mean=initial_avg_mean,
+            initial_avg_var=initial_avg_var,
+        )
 
         self.ada_loss_cfg = {} if ada_loss_cfg is None else ada_loss_cfg
 
@@ -51,32 +58,32 @@ class AdaLossBatchNormalization(L.BatchNormalization):
                 for normalization, and normalizes the input using batch
                 statistics.
         """
-        finetune, = argument.parse_kwargs(
-            kwargs, ('finetune', False),
-            test='test argument is not supported anymore. '
-            'Use chainer.using_config')
+        (finetune,) = argument.parse_kwargs(
+            kwargs,
+            ("finetune", False),
+            test="test argument is not supported anymore. " "Use chainer.using_config",
+        )
 
         if self.avg_mean is None:
             param_shape = tuple(
-                [d for i, d in enumerate(x.shape) if i not in self.axis])
+                [d for i, d in enumerate(x.shape) if i not in self.axis]
+            )
             self._initialize_params(param_shape)
 
         gamma = self.gamma
         if gamma is None:
             with chainer.using_device(self.device):
-                gamma = self.xp.ones(self.avg_mean.shape,
-                                     dtype=self._highprec_dtype)
+                gamma = self.xp.ones(self.avg_mean.shape, dtype=self._highprec_dtype)
 
         beta = self.beta
         if beta is None:
             with chainer.using_device(self.device):
-                beta = self.xp.zeros(self.avg_mean.shape,
-                                     dtype=self._highprec_dtype)
+                beta = self.xp.zeros(self.avg_mean.shape, dtype=self._highprec_dtype)
 
         if configuration.config.train:
             if finetune:
                 self.N += 1
-                decay = 1. - 1. / self.N
+                decay = 1.0 - 1.0 / self.N
             else:
                 decay = self.decay
 
@@ -91,15 +98,17 @@ class AdaLossBatchNormalization(L.BatchNormalization):
                 avg_mean = None
                 avg_var = None
 
-            ret = ada_loss_batch_normalization(x,
-                                               gamma,
-                                               beta,
-                                               eps=self.eps,
-                                               running_mean=avg_mean,
-                                               running_var=avg_var,
-                                               decay=decay,
-                                               axis=self.axis,
-                                               ada_loss_cfg=self.ada_loss_cfg)
+            ret = ada_loss_batch_normalization(
+                x,
+                gamma,
+                beta,
+                eps=self.eps,
+                running_mean=avg_mean,
+                running_var=avg_var,
+                decay=decay,
+                axis=self.axis,
+                ada_loss_cfg=self.ada_loss_cfg,
+            )
         else:
             # Use running average statistics or fine-tuned statistics.
             mean = self.avg_mean
@@ -112,5 +121,6 @@ class AdaLossBatchNormalization(L.BatchNormalization):
                 var,
                 self.eps,
                 axis=self.axis,
-                ada_loss_cfg=self.ada_loss_cfg)
+                ada_loss_cfg=self.ada_loss_cfg,
+            )
         return ret

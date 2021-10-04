@@ -11,7 +11,10 @@ from chainercv import utils
 
 from ada_loss.chainer_impl.ada_loss import AdaLossChainer
 from ada_loss.chainer_impl.functions.ada_loss_cast import ada_loss_cast
-from ada_loss.chainer_impl.links.ada_loss_batch_normalization import AdaLossBatchNormalization
+from ada_loss.chainer_impl.links.ada_loss_batch_normalization import (
+    AdaLossBatchNormalization,
+)
+
 
 class SegNetBasic(chainer.Chain):
 
@@ -52,17 +55,20 @@ class SegNetBasic(chainer.Chain):
     """
 
     _models = {
-        'camvid': {
-            'param': {'n_class': 11},
-            'url': 'https://chainercv-models.preferred.jp/'
-            'segnet_camvid_trained_2018_12_05.npz'
+        "camvid": {
+            "param": {"n_class": 11},
+            "url": "https://chainercv-models.preferred.jp/"
+            "segnet_camvid_trained_2018_12_05.npz",
         }
     }
 
-    def __init__(self, n_class=None, pretrained_model=None, initialW=None, dtype='float32'):
+    def __init__(
+        self, n_class=None, pretrained_model=None, initialW=None, dtype="float32"
+    ):
         param, path = utils.prepare_pretrained_model(
-            {'n_class': n_class}, pretrained_model, self._models)
-        self.n_class = param['n_class']
+            {"n_class": n_class}, pretrained_model, self._models
+        )
+        self.n_class = param["n_class"]
         self.dtype = dtype
 
         if initialW is None:
@@ -70,53 +76,64 @@ class SegNetBasic(chainer.Chain):
 
         super(SegNetBasic, self).__init__()
         with self.init_scope():
-            self.lrn = lambda x: F.local_response_normalization(x, 5, 1, 1e-4 / 5., 0.75)
+            self.lrn = lambda x: F.local_response_normalization(
+                x, 5, 1, 1e-4 / 5.0, 0.75
+            )
 
             self.conv1 = L.Convolution2D(
-                None, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                None, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv1_bn = L.BatchNormalization(64, initial_beta=0.001)
             self.conv1_relu = lambda x: F.relu(x)
             self.conv1_pool = lambda x: F.max_pooling_2d(x, 2, 2, return_indices=True)
 
             self.conv2 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv2_bn = L.BatchNormalization(64, initial_beta=0.001)
             self.conv2_relu = lambda x: F.relu(x)
             self.conv2_pool = lambda x: F.max_pooling_2d(x, 2, 2, return_indices=True)
 
             self.conv3 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv3_bn = L.BatchNormalization(64, initial_beta=0.001)
             self.conv3_relu = lambda x: F.relu(x)
             self.conv3_pool = lambda x: F.max_pooling_2d(x, 2, 2, return_indices=True)
 
             self.conv4 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv4_bn = L.BatchNormalization(64, initial_beta=0.001)
             self.conv4_relu = lambda x: F.relu(x)
             self.conv4_pool = lambda x: F.max_pooling_2d(x, 2, 2, return_indices=True)
 
             self.upsampling4 = lambda x, indices: self._upsampling_2d(x, indices)
             self.conv_decode4 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv_decode4_bn = L.BatchNormalization(64, initial_beta=0.001)
 
             self.upsampling3 = lambda x, indices: self._upsampling_2d(x, indices)
             self.conv_decode3 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv_decode3_bn = L.BatchNormalization(64, initial_beta=0.001)
-            
+
             self.upsampling2 = lambda x, indices: self._upsampling_2d(x, indices)
             self.conv_decode2 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv_decode2_bn = L.BatchNormalization(64, initial_beta=0.001)
 
             self.upsampling1 = lambda x, indices: self._upsampling_2d(x, indices)
             self.conv_decode1 = L.Convolution2D(
-                64, 64, 7, 1, 3, nobias=True, initialW=initialW)
+                64, 64, 7, 1, 3, nobias=True, initialW=initialW
+            )
             self.conv_decode1_bn = L.BatchNormalization(64, initial_beta=0.001)
             self.conv_classifier = L.Convolution2D(
-                64, self.n_class, 1, 1, 0, initialW=initialW)
+                64, self.n_class, 1, 1, 0, initialW=initialW
+            )
 
         self.type_cast_ada_loss = None
 
@@ -132,7 +149,7 @@ class SegNetBasic(chainer.Chain):
         outsize = (x.shape[2] * 2, x.shape[3] * 2)
 
         # appears in mixed16
-        if hasattr(indices, 'array'):
+        if hasattr(indices, "array"):
             indices = indices.array
 
         return F.upsampling_2d(x, indices, ksize=2, stride=2, outsize=outsize)
@@ -166,7 +183,7 @@ class SegNetBasic(chainer.Chain):
         # h = self._upsampling_2d(h, indices1)
         # h = self.conv_decode1_bn(self.conv_decode1(h))
 
-        h = self.lrn(x) 
+        h = self.lrn(x)
 
         h, indices1 = self.conv1_pool(self.conv1_relu(self.conv1_bn(self.conv1(h))))
         h, indices2 = self.conv2_pool(self.conv2_relu(self.conv2_bn(self.conv2(h))))
@@ -187,13 +204,15 @@ class SegNetBasic(chainer.Chain):
         # TODO: refactorize this. Instead of hardcoding, use AdaLossScaled
         if self.dtype != np.float32:
             if not isinstance(self.conv1_bn, AdaLossBatchNormalization):
-                h = F.cast(h, 'float32')
+                h = F.cast(h, "float32")
             else:
                 if self.type_cast_ada_loss is None:
-                    self.type_cast_ada_loss = AdaLossChainer(**self.conv1_bn.ada_loss_cfg)
-                h = ada_loss_cast(h, 'float32', self.type_cast_ada_loss, lognormal=True)
+                    self.type_cast_ada_loss = AdaLossChainer(
+                        **self.conv1_bn.ada_loss_cfg
+                    )
+                h = ada_loss_cast(h, "float32", self.type_cast_ada_loss, lognormal=True)
 
-        return h 
+        return h
 
     def predict(self, imgs):
         """Conduct semantic segmentations from images.
@@ -213,9 +232,10 @@ class SegNetBasic(chainer.Chain):
         labels = []
         for img in imgs:
             C, H, W = img.shape
-            with chainer.using_config('train', False), \
-                    chainer.function.no_backprop_mode():
-              
+            with chainer.using_config(
+                "train", False
+            ), chainer.function.no_backprop_mode():
+
                 x = F.cast(self.xp.asarray(img[np.newaxis]), self.dtype)
                 score = self.forward(x)[0].array.astype(np.float32)
 

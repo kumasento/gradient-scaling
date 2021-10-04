@@ -21,20 +21,20 @@ class AdaLossBranch(function_node.FunctionNode):
 
     def forward(self, inputs):
         """ """
-        x, = inputs
+        (x,) = inputs
         return tuple([x] * self.n_branch)
 
     def backward(self, indexes, grad_outputs):
         """ """
         gs = grad_outputs
-        if 'loss_scale' not in gs[0].__dict__:
+        if "loss_scale" not in gs[0].__dict__:
             g = sum(gs)
         else:
             # rescaling only necessary for adaptive
-            if self.ada_loss.loss_scale_method == 'approx_range':
+            if self.ada_loss.loss_scale_method == "approx_range":
                 gs = self.ada_loss.rescaling(gs)
             g = sum(gs)
             self.ada_loss.set_loss_scale(g, self.ada_loss.grad_loss_scale(gs[0]))
             # print(self.ada_loss.grad_loss_scale(gs[0]))
 
-        return g,
+        return (g,)

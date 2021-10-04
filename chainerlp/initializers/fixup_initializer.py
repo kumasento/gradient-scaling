@@ -12,7 +12,7 @@ from chainer import initializer
 class FixupNormal(initializer.Initializer):
     """ The normal initializer proposed by the Fixup paper. """
 
-    def __init__(self, L, m, dtype=None, fan_option='fan_out'):
+    def __init__(self, L, m, dtype=None, fan_option="fan_out"):
         """ CTOR """
         super(FixupNormal, self).__init__(dtype)
 
@@ -22,6 +22,5 @@ class FixupNormal(initializer.Initializer):
 
     def __call__(self, array):
         """ The initializer. """
-        scale = self.L**(-1 / (2 * self.m - 2))
-        I.HeNormal(scale=scale, dtype=self.dtype,
-                   fan_option=self.fan_option)(array)
+        scale = self.L ** (-1 / (2 * self.m - 2))
+        I.HeNormal(scale=scale, dtype=self.dtype, fan_option=self.fan_option)(array)

@@ -12,7 +12,8 @@ class GradientScaling(object):
     Attributes:
         rate (float): Coefficient for scaling.
     """
-    name = 'GradientScaling'
+
+    name = "GradientScaling"
     call_for_each_param = True
 
     def __init__(self, rate):

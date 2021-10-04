@@ -30,10 +30,10 @@ class Normalize(chainer.Link):
         self.eps = eps
         with self.init_scope():
             # force to use float32
-            with chainer.using_config('dtype', 'float32'):
+            with chainer.using_config("dtype", "float32"):
                 initializer = initializers._get_initializer(initial)
                 self.scale = variable.Parameter(initializer)
-                self.scale.initialize((n_channel), )
+                self.scale.initialize((n_channel),)
 
     def forward(self, x):
         """Normalize input and scale it.

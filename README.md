@@ -1,5 +1,7 @@
 # Reducing Underflow in Mixed Precision Training by Gradient Scaling
 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 This project implements the _adaptive loss scaling_ method to improve the performance of [mixed precision training](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html).
 
 The old repository: https://github.com/ada-loss/ada-loss

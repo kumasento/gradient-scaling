@@ -19,6 +19,7 @@ from chainer import functions as F
 from chainercv.datasets import camvid_label_names
 from chainercv.datasets import CamVidDataset
 from chainercv.extensions import SemanticSegmentationEvaluator
+
 # from chainercv.links import PixelwiseSoftmaxClassifier
 # from chainercv.links import SegNetBasic
 
@@ -34,11 +35,12 @@ from ada_loss.chainer_impl.ada_loss_recorder import AdaLossRecorder
 
 # Change where to import SegNet
 from models.segnet.segnet_basic import SegNetBasic
-from models.segnet.pixelwise_softmax_classifier import PixelwiseSoftmaxClassifier 
+from models.segnet.pixelwise_softmax_classifier import PixelwiseSoftmaxClassifier
 
 # https://docs.chainer.org/en/stable/tips.html#my-training-process-gets-stuck-when-using-multiprocessiterator
 try:
     import cv2
+
     cv2.setNumThreads(0)
 except ImportError:
     pass
@@ -50,21 +52,19 @@ chainer.global_config.cudnn_deterministic = True
 
 
 def get_snapshot_model(model):
-    if hasattr(model.predictor, 'link'):
+    if hasattr(model.predictor, "link"):
         return model.predictor.link
     return model.predictor
 
 
-
-def recalculate_bn_statistics(model, batchsize, dtype='float32'):
-    train = CamVidDataset(split='train')
-    it = chainer.iterators.SerialIterator(
-        train, batchsize, repeat=False, shuffle=False)
+def recalculate_bn_statistics(model, batchsize, dtype="float32"):
+    train = CamVidDataset(split="train")
+    it = chainer.iterators.SerialIterator(train, batchsize, repeat=False, shuffle=False)
     bn_avg_mean = defaultdict(np.float32)
     bn_avg_var = defaultdict(np.float32)
 
-    if dtype == 'mixed16':
-        dtype = 'float16'
+    if dtype == "mixed16":
+        dtype = "float16"
 
     n_iter = 0
     for batch in it:
@@ -72,13 +72,13 @@ def recalculate_bn_statistics(model, batchsize, dtype='float32'):
 
         model(F.cast(model.xp.array(imgs), dtype))
         for name, link in model.namedlinks():
-            if name.endswith('_bn'):
+            if name.endswith("_bn"):
                 bn_avg_mean[name] += link.avg_mean
                 bn_avg_var[name] += link.avg_var
         n_iter += 1
 
     for name, link in model.namedlinks():
-        if name.endswith('_bn'):
+        if name.endswith("_bn"):
             link.avg_mean = bn_avg_mean[name] / n_iter
             link.avg_var = bn_avg_var[name] / n_iter
 
@@ -90,60 +90,63 @@ def transform(in_data):
     if np.random.rand() > 0.5:
         img = img[:, :, ::-1]
         label = label[:, ::-1]
-    
+
     dtype = chainer.global_config.dtype
-    if dtype != 'float32':
+    if dtype != "float32":
         img = img.astype(dtype)
 
     return img, label
 
+
 dtypes = {
-    'float16': np.float16,
-    'float32': np.float32,
-    'mixed16': chainer.mixed16,
+    "float16": np.float16,
+    "float32": np.float32,
+    "mixed16": chainer.mixed16,
 }
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=int, default=-1)
-    parser.add_argument('--batchsize', type=int, default=12)
-    parser.add_argument('--class-weight', type=str, default='class_weight.npy')
-    parser.add_argument('--val-iter', type=int, default=2000)
-    parser.add_argument('--out', type=str, default='result')
-    parser.add_argument('--iter', type=int, default=16000)
-    parser.add_argument('--dtype', type=str, default='float32')
-    parser.add_argument('--init-scale', type=float, default=1.0)
-    parser.add_argument('--n-uf', type=float, default=1e-5)
-    parser.add_argument('--dynamic-interval', type=int, default=None)
-    parser.add_argument('--loss-scale-method', type=str, default='approx_range')
-    parser.add_argument('--verbose', action='store_true', default=False)
+    parser.add_argument("--gpu", type=int, default=-1)
+    parser.add_argument("--batchsize", type=int, default=12)
+    parser.add_argument("--class-weight", type=str, default="class_weight.npy")
+    parser.add_argument("--val-iter", type=int, default=2000)
+    parser.add_argument("--out", type=str, default="result")
+    parser.add_argument("--iter", type=int, default=16000)
+    parser.add_argument("--dtype", type=str, default="float32")
+    parser.add_argument("--init-scale", type=float, default=1.0)
+    parser.add_argument("--n-uf", type=float, default=1e-5)
+    parser.add_argument("--dynamic-interval", type=int, default=None)
+    parser.add_argument("--loss-scale-method", type=str, default="approx_range")
+    parser.add_argument("--verbose", action="store_true", default=False)
     args = parser.parse_args()
 
     # Data type
-    print('==> Using data type: {}'.format(args.dtype))
+    print("==> Using data type: {}".format(args.dtype))
     chainer.global_config.dtype = dtypes[args.dtype]
 
     # Triggers
-    log_trigger = (50, 'iteration')
-    validation_trigger = (args.val_iter, 'iteration')
-    end_trigger = (args.iter, 'iteration')
+    log_trigger = (50, "iteration")
+    validation_trigger = (args.val_iter, "iteration")
+    end_trigger = (args.iter, "iteration")
 
     # Dataset
-    train = CamVidDataset(split='train')
+    train = CamVidDataset(split="train")
     train = TransformDataset(train, transform)
-    val = CamVidDataset(split='val')
+    val = CamVidDataset(split="val")
 
     # Iterator
     train_iter = iterators.MultiprocessIterator(train, args.batchsize)
     val_iter = iterators.MultiprocessIterator(
-        val, args.batchsize, shuffle=False, repeat=False)
+        val, args.batchsize, shuffle=False, repeat=False
+    )
 
     # Model
     class_weight = np.load(args.class_weight)
     model = SegNetBasic(n_class=len(camvid_label_names), dtype=dtypes[args.dtype])
-    
+
     # adaptive loss scaling
-    if args.dtype != 'float32':
+    if args.dtype != "float32":
         recorder = AdaLossRecorder(sample_per_n_iter=100)
         model = AdaLossScaled(
             model,
@@ -154,17 +157,17 @@ def main():
                 AdaLossTransformBatchNormalization(),
             ],
             cfg={
-              'loss_scale_method': args.loss_scale_method,
-              'scale_upper_bound': 65504,
-              'accum_upper_bound': 65504,
-              'update_per_n_iteration': 100,
-              'recorder': recorder,
-              'n_uf_threshold': args.n_uf,
+                "loss_scale_method": args.loss_scale_method,
+                "scale_upper_bound": 65504,
+                "accum_upper_bound": 65504,
+                "update_per_n_iteration": 100,
+                "recorder": recorder,
+                "n_uf_threshold": args.n_uf,
             },
-            verbose=args.verbose)
+            verbose=args.verbose,
+        )
 
-    model = PixelwiseSoftmaxClassifier(
-        model, class_weight=class_weight)
+    model = PixelwiseSoftmaxClassifier(model, class_weight=class_weight)
     if args.gpu >= 0:
         # Make a specified GPU current
         chainer.cuda.get_device_from_id(args.gpu).use()
@@ -175,28 +178,33 @@ def main():
     optimizer.setup(model)
     optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(rate=0.0005))
 
-    if args.dtype == 'mixed16':
+    if args.dtype == "mixed16":
         optimizer.use_fp32_update()
 
     # Updater
-    updater = training.updaters.StandardUpdater(
-        train_iter, optimizer, device=args.gpu)
+    updater = training.updaters.StandardUpdater(train_iter, optimizer, device=args.gpu)
 
-    if args.dtype == 'mixed16':
+    if args.dtype == "mixed16":
         if args.dynamic_interval is not None:
-            print('==> Using dynamic loss scaling (interval={}) ...'.format(
-                args.dynamic_interval))
+            print(
+                "==> Using dynamic loss scaling (interval={}) ...".format(
+                    args.dynamic_interval
+                )
+            )
             optimizer.loss_scaling(interval=args.dynamic_interval, scale=None)
             optimizer._loss_scale_max = 32770.0
         else:
-            if args.loss_scale_method == 'approx_range':
-                print('==> Using adaptive loss scaling ...')
+            if args.loss_scale_method == "approx_range":
+                print("==> Using adaptive loss scaling ...")
             else:
-                print('==> Using default fixed loss scaling (scale={}) ...'.format(
-                    args.init_scale))
+                print(
+                    "==> Using default fixed loss scaling (scale={}) ...".format(
+                        args.init_scale
+                    )
+                )
 
-            optimizer.loss_scaling(interval=float('inf'), scale=None)
-            optimizer._loss_scale_max = 1.0 # to prevent actual loss scaling
+            optimizer.loss_scaling(interval=float("inf"), scale=None)
+            optimizer._loss_scale_max = 1.0  # to prevent actual loss scaling
 
     # Trainer
     trainer = training.Trainer(updater, end_trigger, out=args.out)
@@ -214,52 +222,71 @@ def main():
 
     trainer.extend(extensions.LogReport(trigger=log_trigger))
     trainer.extend(extensions.observe_lr(), trigger=log_trigger)
-    if args.dtype != 'float32':
-        trainer.extend(extensions.observe_value(
-            'loss_scale',
-            lambda trainer: trainer.updater.get_optimizer('main')._loss_scale),
-                       trigger=log_trigger)
-    trainer.extend(extensions.dump_graph('main/loss'))
-    # snapshot the trainer after each 
-    trainer.extend(extensions.snapshot(),
-                   trigger=validation_trigger) 
+    if args.dtype != "float32":
+        trainer.extend(
+            extensions.observe_value(
+                "loss_scale",
+                lambda trainer: trainer.updater.get_optimizer("main")._loss_scale,
+            ),
+            trigger=log_trigger,
+        )
+    trainer.extend(extensions.dump_graph("main/loss"))
+    # snapshot the trainer after each
+    trainer.extend(extensions.snapshot(), trigger=validation_trigger)
     # snapshot the model itself
-    trainer.extend(extensions.snapshot_object(
-        get_snapshot_model(model), 'model_iter_{.updater.iteration}'),
-                   trigger=validation_trigger)
+    trainer.extend(
+        extensions.snapshot_object(
+            get_snapshot_model(model), "model_iter_{.updater.iteration}"
+        ),
+        trigger=validation_trigger,
+    )
 
     if extensions.PlotReport.available():
-        trainer.extend(extensions.PlotReport(
-            ['main/loss'], x_key='iteration',
-            file_name='loss.png'))
-        trainer.extend(extensions.PlotReport(
-            ['validation/main/miou'], x_key='iteration',
-            file_name='miou.png'))
+        trainer.extend(
+            extensions.PlotReport(
+                ["main/loss"], x_key="iteration", file_name="loss.png"
+            )
+        )
+        trainer.extend(
+            extensions.PlotReport(
+                ["validation/main/miou"], x_key="iteration", file_name="miou.png"
+            )
+        )
 
-    metrics = ['epoch', 'iteration', 'elapsed_time', 'lr',
-               'main/loss', 'validation/main/miou',
-               'validation/main/mean_class_accuracy',
-               'validation/main/pixel_accuracy']
-    if args.dtype != 'float32':
-        metrics.append('loss_scale')
+    metrics = [
+        "epoch",
+        "iteration",
+        "elapsed_time",
+        "lr",
+        "main/loss",
+        "validation/main/miou",
+        "validation/main/mean_class_accuracy",
+        "validation/main/pixel_accuracy",
+    ]
+    if args.dtype != "float32":
+        metrics.append("loss_scale")
     trainer.extend(extensions.PrintReport(metrics), trigger=log_trigger)
     trainer.extend(extensions.ProgressBar(update_interval=10))
 
     trainer.extend(
-        SemanticSegmentationEvaluator(
-            val_iter, model.predictor,
-            camvid_label_names),
-        trigger=validation_trigger)
+        SemanticSegmentationEvaluator(val_iter, model.predictor, camvid_label_names),
+        trigger=validation_trigger,
+    )
     # snapshot the best validation result
-    trainer.extend(extensions.snapshot_object(get_snapshot_model(model), 'model_best'),
-                   trigger=chainer.training.triggers.MaxValueTrigger(
-                       'validation/main/miou', trigger=validation_trigger))
+    trainer.extend(
+        extensions.snapshot_object(get_snapshot_model(model), "model_best"),
+        trigger=chainer.training.triggers.MaxValueTrigger(
+            "validation/main/miou", trigger=validation_trigger
+        ),
+    )
 
     hooks = []
-    if args.dtype != 'float32':
-        hook = AdaLossMonitor(sample_per_n_iter=100,
-                              verbose=args.verbose,
-                              includes=['Grad', 'Deconvolution'])
+    if args.dtype != "float32":
+        hook = AdaLossMonitor(
+            sample_per_n_iter=100,
+            verbose=args.verbose,
+            includes=["Grad", "Deconvolution"],
+        )
         recorder.trainer = trainer
         hook.trainer = trainer
 
@@ -271,11 +298,13 @@ def main():
         trainer.run()
 
     chainer.serializers.save_npz(
-        os.path.join(args.out, 'snapshot_model.npz'),
-        recalculate_bn_statistics(model.predictor, args.batchsize, dtype=args.dtype))
+        os.path.join(args.out, "snapshot_model.npz"),
+        recalculate_bn_statistics(model.predictor, args.batchsize, dtype=args.dtype),
+    )
 
-    if args.dtype != 'float32':
-        recorder.export().to_csv(os.path.join(args.out, 'loss_scale.csv'))
+    if args.dtype != "float32":
+        recorder.export().to_csv(os.path.join(args.out, "loss_scale.csv"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
