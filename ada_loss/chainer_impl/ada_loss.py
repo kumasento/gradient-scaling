@@ -156,7 +156,7 @@ class AdaLossChainer(AdaLoss):
         if lognormal:
             X_ = xp.log(xp.abs(X_[X_ != 0]))
 
-        if X.size == 0:
+        if X_.size == 0:
           return None, None
 
         mu, sigma = X_.mean(), X_.std()
@@ -213,6 +213,7 @@ class AdaLossChainer(AdaLoss):
             self.profiler.add_time('calc_stat', calc_stat_end - calc_stat_start)
 
         if o_mu is None and o_sigma is None:
+          np.save('all_zero_g.npy', g)
           return np.array(1.0, dtype=self.full_dtype)
 
         # NOTE: it is possible that o_sigma is 0.
