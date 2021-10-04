@@ -13,6 +13,11 @@ jobs:
       run: |
         sudo apt install mpich --yes
 
+    - uses: Jimver/cuda-toolkit@v0.2.4
+      id: cuda-toolkit
+      with:
+        cuda: '11.2.2'
+
     - uses: actions/checkout@v2
     - name: Set up Python 3.7
       uses: actions/setup-python@v2
