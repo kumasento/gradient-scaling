@@ -12,11 +12,17 @@ jobs:
     - name: Setup dependencies
       run: |
         sudo apt install mpich --yes
+    
+    - name: Use older GCC to satisfy CUDA 10.2
+      run: |
+        sudo apt -y install gcc-8 g++-8
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
 
     - uses: Jimver/cuda-toolkit@v0.2.4
       id: cuda-toolkit
       with:
-        cuda: '11.2.2'
+        cuda: '10.2.89'
 
     - name: Check CUDA installation
       run: |
