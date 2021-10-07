@@ -35,6 +35,11 @@ jobs:
       run: |
         conda env update --file environment.yml --name base
 
+    - name: Post install CuPy
+      run: |
+        conda uninstall --yes cupy cudatoolkit cudnn nccl
+        conda install -c conda-forge cupy cudnn nccl
+
     - name: Check chainer runtime info
       run: |
         python -c 'import chainer; print(chainer.print_runtime_info())'
