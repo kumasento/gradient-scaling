@@ -38,7 +38,7 @@ jobs:
     - name: Post install CuPy
       run: |
         conda uninstall --yes cupy cudatoolkit cudnn nccl
-        conda install -c conda-forge cupy cudnn nccl
+        conda install -c conda-forge cupy=7.7 cudnn nccl
 
     - name: Check chainer runtime info
       run: |
