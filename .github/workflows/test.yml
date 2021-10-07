@@ -13,14 +13,14 @@ jobs:
       run: |
         sudo apt install mpich --yes
     
-    - uses: Jimver/cuda-toolkit@v0.2.4
-      id: cuda-toolkit
-      with:
-        cuda: '11.2.2'
+    # - uses: Jimver/cuda-toolkit@v0.2.4
+    #   id: cuda-toolkit
+    #   with:
+    #     cuda: '11.2.2'
 
-    - name: Check CUDA installation
-      run: |
-        nvcc --version
+    # - name: Check CUDA installation
+    #   run: |
+    #     nvcc --version
 
     - uses: actions/checkout@v2
     - name: Set up Python 3.7
@@ -42,7 +42,7 @@ jobs:
 
     - name: Check chainer runtime info
       run: |
-        python -c 'import chainer; print(chainer.print_runtime_info())'
+        conda run python -c 'import chainer; print(chainer.print_runtime_info())'
 
     - name: Lint with flake8
       run: |
@@ -54,12 +54,12 @@ jobs:
     - name: Test with pytest
       run: |
         conda install pytest
-        pytest ada_loss/
+        conda run pytest ada_loss/
     - name: Generate coverage report
       run: |
         pip install pytest
         pip install pytest-cov
-        pytest ada_loss --cov=./ --cov-report=xml
+        conda run pytest ada_loss --cov=./ --cov-report=xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
