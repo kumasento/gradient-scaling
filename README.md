@@ -2,6 +2,8 @@
 
 [![Python Package using Conda](https://github.com/kumasento/gradient-scaling/actions/workflows/test.yml/badge.svg)](https://github.com/kumasento/gradient-scaling/actions/workflows/test.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![codecov](https://codecov.io/gh/kumasento/gradient-scaling/branch/main/graph/badge.svg?token=XQZrHDoZKd)](https://codecov.io/gh/kumasento/gradient-scaling)
+
 
 This project implements the _gradient scaling_ method to improve the performance of [mixed precision training](https://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html).
 
