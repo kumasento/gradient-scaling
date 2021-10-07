@@ -4,7 +4,6 @@ import unittest
 import chainer
 import chainer.functions as F
 import chainer.links as L
-import cupy as cp
 import numpy as np
 from ada_loss.chainer_impl.ada_loss_scaled import AdaLossScaled
 from ada_loss.chainer_impl.ada_loss_transforms import AdaLossTransformLinear
@@ -15,6 +14,11 @@ from chainer.testing import attr
 from chainercv.links import Conv2DBNActiv
 from chainercv.links.model.resnet.resblock import Bottleneck
 from chainercv.links.model.resnet.resnet import ResNet50
+
+try:
+    import cupy as cp
+except ImportError:
+    cp = None
 
 CFG = {
     "loss_scale_method": "fixed",
@@ -72,7 +76,7 @@ class ResNetTransformTest(unittest.TestCase):
 
     def test_transform_resnet50(self):
         """ """
-        if not cp.cuda.is_available():
+        if cp is None or not cp.cuda.is_available():
             return
         cp.random.seed(0)
         cp.cuda.Device(0).use()

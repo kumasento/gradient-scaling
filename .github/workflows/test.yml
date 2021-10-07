@@ -1,4 +1,4 @@
-name: Python Package using Conda
+name: CPU Test
 
 on: [push]
 
@@ -12,21 +12,14 @@ jobs:
     - name: Setup dependencies
       run: |
         sudo apt install mpich --yes
-    
-    # - uses: Jimver/cuda-toolkit@v0.2.4
-    #   id: cuda-toolkit
-    #   with:
-    #     cuda: '11.2.2'
-
-    # - name: Check CUDA installation
-    #   run: |
-    #     nvcc --version
 
     - uses: actions/checkout@v2
+
     - name: Set up Python 3.7
       uses: actions/setup-python@v2
       with:
         python-version: 3.7
+
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
@@ -36,19 +29,9 @@ jobs:
       run: |
         conda env update --file environment.yml --name base
 
-    - name: Set CUDA_PATH
+    - name: Remove CuPy
       run: |
-        echo "CUDA_PATH=$CONDA" >> $GITHUB_ENV
-
-    - name: Add LD_LIBRARY_PATH
-      run: |
-        echo "LD_LIBRARY_PATH=$CONDA/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        ls -al $CONDA/lib | grep cuda
-
-    # - name: Post install CuPy
-    #   run: |
-    #     conda uninstall --yes cupy cudatoolkit cudnn nccl
-    #     conda install -c conda-forge cupy=7.7 cudnn nccl
+        conda uninstall --yes cupy cudatoolkit cudnn nccl
 
     - name: Check chainer runtime info
       run: |
@@ -61,10 +44,12 @@ jobs:
         flake8 ada_loss/ --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 ada_loss/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Test with pytest
       run: |
         conda install pytest
         conda run pytest ada_loss/
+
     - name: Generate coverage report
       run: |
         pip install pytest

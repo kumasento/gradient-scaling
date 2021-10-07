@@ -4,8 +4,12 @@ import os
 import random
 
 import chainer
-import cupy as cp
 import numpy as np
+
+try:
+    import cupy as cp
+except ImportError:
+    cp = None
 
 
 def scale_grad(grad, scale, dtype=None, key="loss_scale"):
@@ -48,7 +52,8 @@ def set_random_seed(seed, device=None):
     if device is not None:
         chainer.backends.cuda.get_device_from_id(int(device)).use()
 
-    # set Chainer(CuPy) random seed
-    cp.random.seed(seed)
-    # force cuDNN to be deterministic
-    chainer.global_config.cudnn_deterministic = True
+    if cp is not None:
+        # set Chainer(CuPy) random seed
+        cp.random.seed(seed)
+        # force cuDNN to be deterministic
+        chainer.global_config.cudnn_deterministic = True

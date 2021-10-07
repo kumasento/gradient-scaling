@@ -1,20 +1,12 @@
 """ """
 import unittest
-import numpy as np
-import cupy as cp
+
 import chainer
 import chainer.links as L
-import chainer.functions as F
-from chainer import testing
-from chainer.testing import attr
-
-from chainercv.links import Conv2DBNActiv
-from chainercv.links.model.resnet.resblock import Bottleneck
-from chainercv.links.model.resnet.resnet import ResNet50
-
+import numpy as np
 from ada_loss.chainer_impl.functions import loss_scaling
 from ada_loss.chainer_impl.transforms.transform_basic import *
-from ada_loss.chainer_impl.ada_loss_scaled import AdaLossScaled
+from chainer import testing
 
 CFG = {
     "loss_scale_method": "fixed",
