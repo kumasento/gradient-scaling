@@ -35,6 +35,10 @@ jobs:
       run: |
         conda env update --file environment.yml --name base
 
+    - name: Check chainer runtime info
+      run: |
+        python -c 'import chainer; print(chainer.print_runtime_info())'
+
     - name: Lint with flake8
       run: |
         conda install flake8
