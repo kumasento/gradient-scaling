@@ -119,7 +119,9 @@ class AdaLossConvolution2DFunction(convolution_2d.Convolution2DFunction):
             self.ada_loss.set_loss_scale(gx, self.ada_loss.grad_loss_scale(gy_))
             ret.append(gx)
         if 1 in indexes:
-            (gW,) = convolution_2d.Convolution2DGradW(self).apply((x, gy))
+            (gW,) = convolution_2d.Convolution2DGradW(
+                self, W.shape, W.dtype, W.layout
+            ).apply((x, gy))
             gW_ = self.ada_loss.get_unscaled_gradient(gW, prev_scale)
             ret.append(gW_)
             # gW, = convolution_2d.Convolution2DGradW(self).apply((x, gyu))

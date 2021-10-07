@@ -2,9 +2,10 @@
 
 import os
 import random
-import numpy as np
-import cupy as cp
+
 import chainer
+import cupy as cp
+import numpy as np
 
 
 def scale_grad(grad, scale, dtype=None, key="loss_scale"):

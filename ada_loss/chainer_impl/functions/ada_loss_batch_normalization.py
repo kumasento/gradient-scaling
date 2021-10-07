@@ -8,7 +8,8 @@ from chainer.utils import argument
 
 
 class AdaLossBatchNormalization(batch_normalization.BatchNormalization):
-    """ """
+    """ Go to the chainer.functions.normalization.batch_normalization 
+    for the details of this implementation. """
 
     def __init__(
         self, eps=2e-5, mean=None, var=None, decay=0.9, axis=None, ada_loss_cfg=None
@@ -23,23 +24,36 @@ class AdaLossBatchNormalization(batch_normalization.BatchNormalization):
         x, gamma = self.get_retained_inputs()
         (gy,) = grad_outputs
 
-        if self.use_ideep:
+        if isinstance(self._impl, batch_normalization._IDeepBatchNormalizationImpl):
             assert self.var is not None
             var = self.var
         else:
             var = None
 
+        # f = batch_normalization.BatchNormalizationGrad(
+        #     self.eps,
+        #     # self.use_cudnn,
+        #     # self.mode,
+        #     self.expander,
+        #     self.axis,
+        #     self.mean,
+        #     var,
+        #     self.inv_std,
+        #     self.key_axis,
+        # )
+
         f = batch_normalization.BatchNormalizationGrad(
             self.eps,
-            self.use_cudnn,
-            self.mode,
             self.expander,
             self.axis,
             self.mean,
             var,
             self.inv_std,
             self.key_axis,
+            self._impl,
+            self.forward_data,
         )
+
         gx, ggamma, gbeta = f.apply((x, gamma, gy))
 
         # update the loss scale

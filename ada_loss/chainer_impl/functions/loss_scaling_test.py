@@ -1,13 +1,13 @@
 """ Test the correctness of loss_scaling """
 import unittest
-import numpy as np
-import chainer
-import chainer.links as L
-import chainer.functions as F
-from chainer import testing
 
-from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
 from ada_loss.chainer_impl.functions.ada_loss_branch import AdaLossBranch
+from ada_loss.chainer_impl.functions.loss_scaling import loss_scaling
+from chainer import testing
 
 
 class MultiHeadLink(chainer.Chain):
@@ -32,7 +32,7 @@ class LossScalingTest(unittest.TestCase):
             loss.backward()
 
             self.assertTrue("loss_scale" in x.grad_var.__dict__)
-            self.assertEquals(x.grad_var.__dict__["loss_scale"], 16)
+            self.assertEqual(x.grad_var.__dict__["loss_scale"], 16)
 
 
 testing.run_module(__name__, __file__)

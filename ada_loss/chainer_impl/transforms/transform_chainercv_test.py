@@ -70,8 +70,6 @@ class AdaLossTransformBottleneckTest(unittest.TestCase):
 class ResNetTransformTest(unittest.TestCase):
     """ Try to transform a standard ChainerCV ResNet model """
 
-    @attr.gpu
-    @attr.slow
     def test_transform_resnet50(self):
         """ """
         if not cp.cuda.is_available():
